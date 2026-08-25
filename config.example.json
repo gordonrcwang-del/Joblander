@@ -1,0 +1,15 @@
+{
+  "_readme": "Copy this file to config.json in the same folder and fill in your own values. config.json is gitignored — it never leaves your machine.",
+  "gmail_address": "you@gmail.com",
+  "_gmail_address": "The Gmail account the scanners send reports FROM and TO, and the Google Calendar the interview scan writes to. The app password itself is NOT stored here — see docs/SETUP.md, it lives in the macOS Keychain.",
+  "gmail_app_password_keychain_service": "job-scan-smtp-app-password",
+  "_gmail_app_password_keychain_service": "Keychain service name you created in docs/SETUP.md step 2. Change it only if you used a different name.",
+  "launchd_label_prefix": "com.example",
+  "_launchd_label_prefix": "Prefix for the two scheduled jobs (<prefix>.jobdiscover and <prefix>.interviewscan). Convention is reverse-DNS; use something you own or just your username.",
+  "source_secrets": {
+    "asml": {
+      "auth_token": "01-...replace with the key from the careers site's JS bundle..."
+    }
+  },
+  "_source_secrets": "Optional. Overlays real values onto sources.json's per-company `config` block at load time, keyed by company id. sources.json is public and carries placeholders; anything that looks like a credential lives here instead, so it never reaches the repo. See docs/SETUP.md step 4."
+}

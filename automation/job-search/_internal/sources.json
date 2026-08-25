@@ -1,0 +1,53 @@
+{
+  "_readme": "SINGLE SOURCE OF TRUTH for which employers this system knows about. Everything else derives from it: the job scanner iterates it, auto_submit_config.json keys match its `id`s, the interview scan builds its Gmail search from `name` + `aliases`, and SOP overlays are named `<id>-<platform>.md`. To target a different industry or a different set of companies, edit this file — you should not have to touch any prompt or script.",
+
+  "_adding_a_company": "Add an entry with a unique lowercase `id`, a display `name`, any `aliases` recruiters actually use in email, and an `adapter`. Park one you haven't reverse-engineered yet with `enabled: false` + `adapter: \"unknown\"` — the scanner skips it, but the interview scan still recognises its name in your inbox. Supported adapters: `workday`, `eightfold`, `sitecore_discover`.",
+
+  "request_delay_seconds": 1.5,
+
+  "companies": [
+    {
+      "id": "kla",
+      "name": "KLA",
+      "aliases": ["KLA", "KLA-Tencor", "科磊"],
+      "enabled": true,
+      "adapter": "workday",
+      "config": { "host": "https://kla.wd1.myworkdayjobs.com", "tenant": "kla", "site": "Search" }
+    },
+    {
+      "id": "amat",
+      "name": "Applied Materials",
+      "aliases": ["AMAT", "Applied Materials", "應用材料"],
+      "enabled": true,
+      "adapter": "eightfold",
+      "config": {
+        "host": "careers.appliedmaterials.com", "domain": "appliedmaterials.com", "search_location": "Taiwan",
+        "note": "改用 Eightfold（appliedmaterials.com 實際導向的官方站）取代 Workday External site — 2026-08-11 實測 Workday 那個端點少了整個台南/Display 事業群的職缺（100 筆裡少 35 筆），Eightfold 才是完整資料源。"
+      }
+    },
+    {
+      "id": "asml",
+      "name": "ASML",
+      "aliases": ["ASML", "艾司摩爾"],
+      "enabled": true,
+      "adapter": "sitecore_discover",
+      "config": {
+        "host": "discover-euc1.sitecorecloud.io", "tenant_id": "126200477", "rfk_id": "asml_job_search",
+        "auth_token": "<see docs/SETUP.md — grab it from the careers site's own JS bundle>",
+        "locale_country": "us", "locale_language": "en", "search_country": "Taiwan",
+        "note": "2026-08-12 靠瀏覽器抓封包找到真正端點：Sitecore Discover API。auth_token 是網站前端 JS bundle 內建的公開 search-only key（每個訪客都一樣，不是登入 session），不是密鑰外洩——但公開 repo 裡不放實際字串，免得被 secret scanner 誤判。取得方式見 docs/SETUP.md。全職缺 JD 已內含在 list response 裡（j.description），不用像 Workday/Eightfold 那樣另外呼叫 detail API。"
+      }
+    },
+    {
+      "id": "lam",
+      "name": "Lam Research",
+      "aliases": ["Lam", "Lam Research", "科林研發"],
+      "enabled": false,
+      "adapter": "unknown",
+      "config": {
+        "careers_url": "https://careers.lamresearch.com/careers",
+        "note": "Eightfold。/api/apply/v2/jobs 存在但沒帶對 domain/pid 參數會回 'Not authorized for PCSX'。需抓封包確認正確參數。"
+      }
+    }
+  ]
+}

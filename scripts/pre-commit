@@ -1,0 +1,82 @@
+#!/bin/bash
+# Blocks a commit that would publish personal data.
+#
+# Install:  ln -sf ../../scripts/pre-commit .git/hooks/pre-commit
+# Bypass:   git commit --no-verify   (only when you are certain a hit is a false positive)
+#
+# .gitignore is passive — it only protects files git isn't already tracking. This
+# hook is the active layer: it reads the actual staged content, so it also catches
+# a leak edited into a file that is legitimately tracked.
+
+set -uo pipefail
+
+# One pattern per line, extended regex. Add to this as you notice new tells.
+PATTERNS=(
+  # ── identity ──
+  # NOT a bare 'gordonrcwang': that is also the GitHub handle (gordonrcwang-del),
+  # which legitimately appears in LICENSE and the README clone URL. Match the
+  # three shapes an actual leak takes instead.
+  'gordonrcwang@'                            # email address
+  '/Users/gordonrcwang'                      # absolute home path
+  'com\.gordonrcwang'                        # launchd job label
+  '[Jj]ui-?[Cc]he'
+  '瑞哲'
+  '09[0-9]{2}-?[0-9]{3}-?[0-9]{3}'          # TW mobile number
+  # ── employment / education history ──
+  'Sino Applied'
+  '泛亞應用'
+  # ── application history ──
+  '(kla|amat|asml|tsmc|garmin|lam)-[0-9A-Z]{5,}'   # ledger keys
+  'R2[0-9]{6}'                                      # Eightfold req IDs
+  'J-00[0-9]{6}'                                    # ASML req IDs
+  # ── credentials ──
+  '01-[0-9a-f]{8}-[0-9a-f]{32}'                     # Sitecore Discover search key
+  'AKIA[0-9A-Z]{16}'
+  '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+)
+
+# Files where a hit is expected and fine — fake personas, and this hook itself.
+ALLOWLIST='(\.example\.(md|json)$|^scripts/pre-commit$)'
+
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -Ev "$ALLOWLIST" || true)
+[ -z "$staged" ] && exit 0
+
+found=0
+last_file=''
+while IFS= read -r file; do
+  [ -f "$file" ] || continue
+  # skip binaries
+  git diff --cached --numstat -- "$file" | grep -q '^-' && continue
+  for pat in "${PATTERNS[@]}"; do
+    hits=$(git show ":$file" 2>/dev/null | grep -nE -e "$pat" || true)
+    [ -z "$hits" ] && continue
+    if [ "$found" -eq 0 ]; then
+      echo ""
+      echo "  ✋ COMMIT BLOCKED — personal data in staged content"
+      echo ""
+      found=1
+    fi
+    if [ "$last_file" != "$file" ]; then echo "  $file"; last_file="$file"; fi
+    echo "$hits" | head -3 | sed 's/^/      /' | cut -c1-140
+    echo ""
+  done
+done <<< "$staged"
+
+if [ "$found" -eq 1 ]; then
+  cat <<'MSG'
+  Fix it, don't bypass it. Usual causes:
+
+    1. A real value used as an example in a comment or doc. Replace with a
+       placeholder — that is where every leak in this repo has come from.
+    2. A file that should be gitignored but is already tracked. .gitignore does
+       not apply to tracked files:  git rm --cached <file>
+    3. A genuinely new fake-persona example file. Name it *.example.md /
+       *.example.json so the allowlist covers it.
+
+  Only if you are certain it is a false positive:  git commit --no-verify
+
+MSG
+  exit 1
+fi
+
+exit 0

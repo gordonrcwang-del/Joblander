@@ -1,0 +1,133 @@
+{
+  "_purpose": "EXAMPLE FILE — copy to applicant_profile.json in this same folder and replace every value with your own. applicant_profile.json is gitignored. This is the fast path autofill-agent reads before touching any application form, so it never has to re-parse BACKGROUND.md prose for a field that is already structured here. All values below are fictional.",
+
+  "_why_so_many_name_and_phone_variants": "ATS platforms disagree about format and some reject silently. Workday wants a leading zero on the local phone number, Eightfold rejects CJK characters in Legal Name fields, some forms want the country code as a dropdown label rather than a +number. Recording every variant once here is cheaper than rediscovering it mid-application.",
+
+  "legal_name": {
+    "family_zh": "陳",
+    "given_zh": "彥廷",
+    "family_en": "Chen",
+    "given_en": "Yen-Ting",
+    "full_zh": "陳彥廷",
+    "note": "Eightfold rejects CJK in Legal First/Last Name and blames punctuation in the error message — use family_en/given_en there. Workday accepts either."
+  },
+
+  "preferred_name": {
+    "family_en": "Chen",
+    "given_en": "Alex",
+    "_note": "The everyday English name, NOT the romanized legal given name. Eightfold's 'Given Name - Western Script' field wants this one."
+  },
+
+  "contact": {
+    "email": "alex.chen.example@gmail.com",
+    "phone_country_code": "+886",
+    "phone_country_dropdown": "Taiwan (+886)",
+    "phone_local_with_leading_zero": "0912345678",
+    "phone_local_no_leading_zero": "912345678",
+    "note": "Workday validates against the country dropdown — pick the dropdown value first, then fill the local number without the leading zero. Some Eightfold forms want it with."
+  },
+
+  "address": {
+    "postal_code": "300",
+    "country": "Taiwan",
+    "city_zh": "新竹市",
+    "district_zh": "東區",
+    "line1_zh": "光復路二段 101 號 5 樓",
+    "county_or_city_dropdown_value": "Hsinchu City",
+    "city_en": "Hsinchu City",
+    "line1_en": "5F., No. 101, Sec. 2, Guangfu Rd., East Dist.",
+    "full_zh": "300 新竹市東區光復路二段 101 號 5 樓",
+    "note": "Workday sometimes exposes both 'Address Line 1' and 'Address Line 1 - Chinese'. When both exist, exact-match the label or you will fill the wrong one."
+  },
+
+  "languages": [
+    {
+      "language": "Chinese (Mandarin)",
+      "fluent": true,
+      "listening": "Native",
+      "reading": "Native",
+      "speaking": "Native",
+      "writing": "Native",
+      "note": "Some forms have a single 'I am fluent in this language' checkbox instead of the four sub-ratings."
+    },
+    {
+      "language": "English",
+      "fluent": true,
+      "listening": "Advanced",
+      "reading": "Advanced",
+      "speaking": "Intermediate",
+      "writing": "Advanced",
+      "note": "TOEIC 890 (2024). Some applications ask for a test score in a free-text field — keep the number and year here."
+    }
+  ],
+
+  "education": [
+    {
+      "school": "National Cheng Kung University",
+      "degree": "Bachelor of Science",
+      "degree_dropdown_value": "Bachelor's Degree",
+      "field_of_study_dropdown_value": "Materials Science",
+      "field_of_study_note": "Plain department names usually exist standalone in Workday's picklist — check before settling for a combined/hybrid option.",
+      "start": "2014-09",
+      "end": "2018-06",
+      "location": "Tainan, Taiwan",
+      "gpa_4_0_scale": "3.6",
+      "status": "Completed"
+    },
+    {
+      "school": "National Tsing Hua University",
+      "degree": "Master of Science",
+      "degree_dropdown_value": "Master's Degree",
+      "field_of_study_dropdown_value": "Materials Science",
+      "field_of_study_note": "",
+      "start": "2019-09",
+      "end": "2021-07",
+      "location": "Hsinchu, Taiwan",
+      "gpa_4_0_scale": "3.9",
+      "status": "Completed"
+    }
+  ],
+
+  "work_experience": {
+    "note": "Do NOT dump every entry onto every application. Pick the entries that match what the specific posting asks for — that judgment is per-application and belongs to the agent, not to this file.",
+    "entries": [
+      {
+        "company": "Crystal Optoelectronics Co., Ltd.",
+        "company_zh": "晶采光電股份有限公司",
+        "title": "Process R&D Engineer",
+        "start": "2021-08",
+        "end": "2025-06",
+        "location": "Hsinchu, Taiwan",
+        "employment_type": "Full-time",
+        "role_description_source": "Background Informations/job_description_crystal_opto.md — quote its bullets verbatim, do not paraphrase them into the form."
+      },
+      {
+        "company": "Republic of China Army",
+        "company_zh": "中華民國陸軍",
+        "title": "Private (compulsory military service)",
+        "start": "2018-07",
+        "end": "2019-03",
+        "location": "Taiwan",
+        "employment_type": "Military service",
+        "role_description_source": "Include only when the form has no separate military-service section and would otherwise show an unexplained gap."
+      }
+    ]
+  },
+
+  "application_defaults": {
+    "_note": "These are the answers that repeat on almost every application. Recording them here is what stops the agent from re-deriving them (and answering inconsistently) each time.",
+    "years_of_relevant_experience_bucket": "3-5 years",
+    "work_authorization_taiwan": "Citizen — no work permit required",
+    "legally_eligible_to_work_in_taiwan": true,
+    "requires_sponsorship_now_or_future": false,
+    "worked_at_company_via_third_party_last_12mo": false,
+    "ai_matching_consent": "Yes",
+    "ai_matching_consent_note": "Eightfold asks whether you consent to AI-assisted matching. Decide once, record it here, stay consistent.",
+    "note": "Anything JD-dependent — e.g. 'do you meet the basic requirements for this role' — is NOT a default. Leave it out of this block; it is a per-application judgment call."
+  },
+
+  "resume": {
+    "path": "Background Informations/resume.pdf",
+    "filename_warning": "Some ATS surface the uploaded filename to the recruiter verbatim. Name the file something you would be happy for them to read — 'resume_v7_FINAL_fix2.pdf' is a real own-goal."
+  }
+}

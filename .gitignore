@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────────
+#  Personal data — never commit.
+#
+#  .gitignore only protects files git is NOT already tracking. Once a file
+#  is tracked, edits to it get committed regardless of what's listed here.
+#  scripts/pre-commit is the active second layer — install it:
+#      ln -sf ../../scripts/pre-commit .git/hooks/pre-commit
+# ─────────────────────────────────────────────────────────────────────
+
+# Config with real values (example version ships)
+config.json
+.claude/settings.local.json
+
+# Résumé, certificates, narrative background
+Background Informations/*
+!Background Informations/BACKGROUND.example.md
+!Background Informations/README.md
+
+# Structured autofill data
+automation/job-apply/_internal/applicant_profile.json
+
+# Per-employer application walkthroughs
+automation/job-apply/_internal/sop/_local/*
+!automation/job-apply/_internal/sop/_local/README.md
+
+# Application + interview history
+automation/job-search/_internal/ledger*.json
+automation/interview-scan/_internal/reported_state.json
+automation/TODO.md
+
+# Your own search config (example versions ship)
+automation/job-search/job-criteria.md
+automation/job-search/target-companies.md
+
+# Generated output
+automation/job-search/today-jobs.md
+automation/job-search/applied-jobs.md
+automation/job-search/archive/
+
+# Interview prep: every company folder is personal.
+# Only the generic question list ships.
+interview_prep/*/
+!interview_prep/General/
+interview_prep/General/*
+!interview_prep/General/通用反問清單.md
+
+# Client lists, spreadsheets, derived knowledge-graph index
+Appendix/
+graphify-out/
+
+# ─────────────────────────────────────────────────────────────────────
+#  Runtime junk
+# ─────────────────────────────────────────────────────────────────────
+**/logs/
+**/__pycache__/
+*.pyc
+*.bak
+*.bak.*.json
+*.pre-rewrite
+*.lock
+.DS_Store

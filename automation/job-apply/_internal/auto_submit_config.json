@@ -1,0 +1,12 @@
+{
+  "_purpose": "Per-company override of the default confirm-before-submit behavior. Read by autofill-agent (see .claude/skills/autofill-agent/SKILL.md, Workflow step 6) before the final Submit click on any application. company_id values match automation/job-search/_internal/sources.json.",
+  "_default": "confirm",
+  "_values": "'confirm' = show full filled application and wait for explicit yes (default, safe). 'auto' = submit immediately after filling, no confirmation — only for companies the user has explicitly turned this on for.",
+  "companies": {
+    "kla": "confirm",
+    "amat": "confirm",
+    "asml": "confirm",
+    "lam": "confirm"
+  },
+  "_keys": "Keys must match an `id` in automation/job-search/_internal/sources.json."
+}
