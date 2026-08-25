@@ -25,7 +25,7 @@ automation/job-apply/_internal/sop/_local/*
 
 # Application + interview history
 automation/job-search/_internal/ledger*.json
-automation/interview-scan/_internal/reported_state.json
+automation/interview-scan/_internal/reported-state.json
 automation/TODO.md
 
 # Your own search config (example versions ship)
@@ -45,7 +45,7 @@ interview-prep/general/*
 !interview-prep/general/通用反問清單.md
 
 # Client lists, spreadsheets, derived knowledge-graph index
-Appendix/
+appendix/
 graphify-out/
 
 # ─────────────────────────────────────────────────────────────────────

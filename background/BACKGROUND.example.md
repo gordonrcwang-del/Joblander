@@ -140,4 +140,4 @@
 
 - `resume.pdf` — 最新履歷（英文版）
 - `resume_zh.pdf` — 中文版
-- `job_description_<前雇主>.md` — 前雇主的職務說明，填 Role Description 欄位時逐字引用，不要改寫
+- `job-description-<前雇主>.md` — 前雇主的職務說明，填 Role Description 欄位時逐字引用，不要改寫

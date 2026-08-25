@@ -19,7 +19,7 @@ Produces a `WORKFLOW.md` for a target skill: a mermaid flowchart plus a file tre
 3. **Draw the flowchart** at this detail level (match `interview-prep/WORKFLOW.md` and `automation/job-apply/WORKFLOW.md` as reference implementations):
    - Keep every decision point as a `{"..."}` diamond with its real branches — this is the part the user has explicitly asked NOT to simplify away.
    - Box labels: a handful of words, wrapped with `<br/>` if needed, not a full sentence. One emoji per major action box is fine for scannability; skip emoji on decision diamonds and pure pass-through boxes.
-   - Use the real file/folder/config names from the skill (e.g. `applicant-profile.json`, `company_brief.md`) — these are not "too technical" to keep, they're the whole point of the "what gets touched" half of the doc.
+   - Use the real file/folder/config names from the skill (e.g. `applicant-profile.json`, `company-brief.md`) — these are not "too technical" to keep, they're the whole point of the "what gets touched" half of the doc.
    - Do NOT explain *how* each step works internally (no anchor-selection heuristics, no exact tool-call sequences, no rationale sentences inside boxes) — that belongs in the skill's own `SKILL.md`, not the chart. If a step in `SKILL.md` has a paragraph of internal reasoning behind it, the chart gets one short box, not a summary of the paragraph.
 
 4. **Add a "What gets created / touched" section** below the diagram: a fenced code block showing the real file tree or path list, each line with a short trailing comment (`← what this is`, `(read, not written)`, `(written the first time, reused after)`) — not a bullet list, not prose.

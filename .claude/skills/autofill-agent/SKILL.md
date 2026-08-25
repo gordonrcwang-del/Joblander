@@ -37,7 +37,7 @@ Any time the user gives a job-posting URL (or names a specific role) and wants t
 ## Data sources (read before filling anything)
 1. **`automation/job-apply/_internal/applicant-profile.json`** — structured autofill data: legal/preferred name, address, education, `work_experience.entries` (the full factual record, one entry per employer/role), languages, visa/sponsorship defaults, resume path. Fast path — don't re-parse BACKGROUND.md prose if the field is already here.
 2. **`background/BACKGROUND.md`** — narrative/STAR-story source, plus platform-specific pre-staged answers under "Application Autofill Kit".
-3. **`background/job_description_*.md`** — per-employer job-description files. When a Role Description field needs employer-specific framing, check for one of these first and use its bullets verbatim, not paraphrased.
+3. **`background/job-description-*.md`** — per-employer job-description files. When a Role Description field needs employer-specific framing, check for one of these first and use its bullets verbatim, not paraphrased.
 4. **Which `work_experience` entries to include, and how to word Role Description, is a per-application judgment call** — don't dump the unfiltered profile onto every application. Match entries to what the specific posting is asking for.
 5. **`automation/job-apply/_internal/auto-submit-config.json`** — per-`company_id` toggle (`"confirm"` default vs `"auto"`) controlling whether Submit needs an explicit user yes. See Workflow step 6.
 

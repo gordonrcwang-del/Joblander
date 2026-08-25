@@ -13,7 +13,7 @@ Check Gmail for anything that changes the state of an application — interview 
 
 1. Read two files — together they are everything a previous run already knew:
    - `interview-prep/general/面試行程.md` in full — the current schedule state (dates, times, formats, interviewers).
-   - `automation/interview-scan/_internal/reported_state.json` — every line any previous run has already put in the user's inbox. Step 6 uses it to keep the email down to what actually changed. If the file is missing or unparseable, treat it as `{"version": 1, "entries": {}}` and carry on; step 6d says what to do about it.
+   - `automation/interview-scan/_internal/reported-state.json` — every line any previous run has already put in the user's inbox. Step 6 uses it to keep the email down to what actually changed. If the file is missing or unparseable, treat it as `{"version": 1, "entries": {}}` and carry on; step 6d says what to do about it.
 
 2. Search Gmail for application-related email from the last 3 days. Two searches, because the vocabularies barely overlap:
    - Scheduling: `(interview OR 面試 OR 面談 OR 意願 OR "phone screen" OR onsite OR "interview invitation") newer_than:3d`
@@ -39,8 +39,8 @@ Check Gmail for anything that changes the state of an application — interview 
    - Do not touch any other file directly (see step 5.5 for the one exception).
    - **`🔒 改期協調中` overrides everything above.** If `面試行程.md` has a section headed `## 🔒 改期協調中` and this email's company + role appears in it, a reschedule has already been requested and the other side hasn't confirmed yet. The email still quotes the OLD time — that is expected, not a change. **Do not rewrite the date, do not move the row into `已確認排程`, and skip step 5.6 entirely for it** (see 5.6.0). Report it in [INTERVIEW] as `<Company> <date> <role> - reschedule pending, untouched`. Only once a confirmation email arrives with a genuinely NEW time does this stop applying — then update the file, remove the item from the `🔒 改期協調中` section, and proceed normally.
 
-5. **For every genuinely new interview invitation** (not a duplicate you skipped in step 4), also run the `interview-prep` skill for that company + role, via the Skill tool (`Skill({skill: "interview-prep"})`), so a prep folder with `company_brief.md`, `position_intro.md`, `模擬面試_QA.md`, and `基本知識.md` gets created automatically. Two adjustments for running it unattended:
-   - `interview-prep`'s normal instruction to "ask the user to paste the JD text" if the posting URL is missing/dead/gated does not apply here — you can't ask anyone. Instead: try `automation/job-search/_internal/ledger.json` first (as the skill normally does), and if that fails too, write `position_intro.md` with what you *can* determine (from the email itself, or company_brief-level info) and leave the JD-summary section with a clear one-line note that the JD needs to be pasted in manually — don't block the run waiting for input.
+5. **For every genuinely new interview invitation** (not a duplicate you skipped in step 4), also run the `interview-prep` skill for that company + role, via the Skill tool (`Skill({skill: "interview-prep"})`), so a prep folder with `company-brief.md`, `position-intro.md`, `模擬面試-QA.md`, and `基本知識.md` gets created automatically. Two adjustments for running it unattended:
+   - `interview-prep`'s normal instruction to "ask the user to paste the JD text" if the posting URL is missing/dead/gated does not apply here — you can't ask anyone. Instead: try `automation/job-search/_internal/ledger.json` first (as the skill normally does), and if that fails too, write `position-intro.md` with what you *can* determine (from the email itself, or company-brief-level info) and leave the JD-summary section with a clear one-line note that the JD needs to be pasted in manually — don't block the run waiting for input.
    - If a company/position folder for this exact role already exists with all four files, `interview-prep` will just skip everything (that's expected, not an error) — don't treat it as a problem.
 
 5.5. **For every genuinely new interview invitation**, also check whether that job is already tracked in the job-search ledger — read `automation/job-search/applied-jobs.md` and look for a row matching the same company and a clearly matching role title.
@@ -92,7 +92,7 @@ Check Gmail for anything that changes the state of an application — interview 
 
    6a. **Drop the no-ops.** An `[INTERVIEW]` line whose entire outcome is `already current`, `calendar already present`, or both — i.e. you verified something and changed nothing — never appears in the report. It is not news. A line survives only if it contains at least one of `schedule file updated`, `calendar created`, `calendar updated`, `ledger -> interview`, `prep folder created`, or `reschedule pending, untouched`.
 
-   6b. **Drop what a previous run already said.** `reported_state.json` (read in step 1) is the memory of that. Compute a signature for each surviving line and look it up:
+   6b. **Drop what a previous run already said.** `reported-state.json` (read in step 1) is the memory of that. Compute a signature for each surviving line and look it up:
 
    | Section | Signature |
    |---|---|
@@ -161,7 +161,7 @@ Check Gmail for anything that changes the state of an application — interview 
 ## Constraints
 - Read-only on Gmail — never send, label, or modify any email.
 - On Google Calendar: create and update only, and only on `<your-gmail-address>`. Never delete an event, never add attendees (that would send an invitation to a recruiter), never touch an event unrelated to an interview.
-- File writes are limited to `interview-prep/general/面試行程.md`, `automation/interview-scan/_internal/reported_state.json`, whatever `interview-prep` itself writes under `interview-prep/<Company>/<Position>/`, and — only via the exact `scan_jobs.py progress` command in steps 5.5 and 5.7, never a direct edit — `automation/job-search/_internal/ledger.json` / `applied-jobs.md`. Nothing outside that.
+- File writes are limited to `interview-prep/general/面試行程.md`, `automation/interview-scan/_internal/reported-state.json`, whatever `interview-prep` itself writes under `interview-prep/<Company>/<Position>/`, and — only via the exact `scan_jobs.py progress` command in steps 5.5 and 5.7, never a direct edit — `automation/job-search/_internal/ledger.json` / `applied-jobs.md`. Nothing outside that.
 - Suppressing a line from the email never means skipping the work behind it. Still update `面試行程.md`, still create the calendar event, still file the ledger status — step 6's filter is about the report only. A no-op is quiet because nothing changed, never because you decided not to check.
 - A wrong ledger key is worse than a missed update: the missed one gets caught by the next email or by you, the wrong one silently marks a live application dead. When the match isn't certain, skip and report.
 - Don't ask questions — you're unattended. If something is ambiguous, make the conservative choice (don't guess at missing details; leave a field out or a clear TODO note rather than inventing one) and proceed.

@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart TD
-    A["⏰ launchd fires<br/>08:20 / 13:20 daily"] --> B["📖 Read 面試行程.md<br/>+ reported_state.json<br/>(what was already emailed)"]
+    A["⏰ launchd fires<br/>08:20 / 13:20 daily"] --> B["📖 Read 面試行程.md<br/>+ reported-state.json<br/>(what was already emailed)"]
     B --> C["🔍 Two Gmail searches<br/>scheduling + outcomes<br/>(last 3d)"]
 
     C --> D{"Search itself<br/>failed?"}
@@ -38,14 +38,14 @@ flowchart TD
     T -->|yes, time changed| V["✏️ update_event<br/>Asia/Taipei"]
     T -->|no| W["➕ create_event<br/>面試｜公司 — 職位<br/>Asia/Taipei, no attendees<br/>reminders 1d + 1h"]
     RS2 --> O
-    U --> O["🧹 Novelty filter<br/>drop no-ops + anything<br/>already in reported_state"]
+    U --> O["🧹 Novelty filter<br/>drop no-ops + anything<br/>already in reported-state"]
     V --> O
     W --> O
     Y3 --> O
     Y4 --> O
     Z --> O
     K --> O
-    O --> O3["📧 Email — every run<br/>only what's new; nothing new<br/>= 三段 none (heartbeat)<br/>💾 record in reported_state"]
+    O --> O3["📧 Email — every run<br/>only what's new; nothing new<br/>= 三段 none (heartbeat)<br/>💾 record in reported-state"]
 ```
 
 ## What gets touched
@@ -57,7 +57,7 @@ automation/interview-scan/
     ├── scan-gmail-interviews.sh        ← the claude -p invocation, run BY run_scan.py
     ├── prompt.md                       ← instructions given to the headless run each time (read)
     ├── send_email_notification.py      ← sends the summary email, on runs that have one to send
-    ├── reported_state.json              ← every line already emailed; read + rewritten each run
+    ├── reported-state.json              ← every line already emailed; read + rewritten each run
     └── logs/launchd.log                ← stdout/stderr from every run
 
 macOS Keychain
@@ -65,9 +65,9 @@ macOS Keychain
 
 interview-prep/general/面試行程.md              ← read every run, written only when something's new/changed
 interview-prep/<Company>/<Position>/   ← created by /interview-prep, only for genuinely new invitations
-├── company_brief.md
-├── position_intro.md
-├── 模擬面試_QA.md
+├── company-brief.md
+├── position-intro.md
+├── 模擬面試-QA.md
 └── 基本知識.md
 
 automation/job-search/
@@ -83,7 +83,7 @@ Google Calendar (<your-gmail-address>)
 
 Deliberately **:20 past the hour**, not on the hour: `com.example.jobdiscover` runs at 08:00/13:00 and writes `ledger.json` via `discover`, while this scan writes the same file via `progress`. They used to fire in the same minute, so a status update and a discovery run could clobber each other. Changed 2026-08-17 — keep the gap if you ever retime either job.
 
-Read-only on Gmail (never sends/labels/deletes) — the outgoing email is sent via direct SMTP, not the Gmail connector. File writes are limited to `面試行程.md`, `_internal/reported_state.json`, whatever `/interview-prep` creates under `interview-prep/<Company>/<Position>/`, and — only via that one `scan_jobs.py progress` command, never a direct edit — `ledger.json`/`applied-jobs.md`. The run is restricted to exactly those tools, so there's no path for it to touch anything else even unattended.
+Read-only on Gmail (never sends/labels/deletes) — the outgoing email is sent via direct SMTP, not the Gmail connector. File writes are limited to `面試行程.md`, `_internal/reported-state.json`, whatever `/interview-prep` creates under `interview-prep/<Company>/<Position>/`, and — only via that one `scan_jobs.py progress` command, never a direct edit — `ledger.json`/`applied-jobs.md`. The run is restricted to exactly those tools, so there's no path for it to touch anything else even unattended.
 
 ## Outcome tracking (added 2026-08-17)
 
@@ -113,7 +113,7 @@ Twice a day, for four days, saying nothing. Because the search window is 3 days 
 Two filters, in `prompt.md` step 6:
 
 1. **No-ops never print.** An `[INTERVIEW]` line whose whole outcome is `already current` / `calendar already present` is dropped. It survives only if something actually happened: `schedule file updated`, `calendar created`, `calendar updated`, `ledger -> interview`, `prep folder created`, `reschedule pending, untouched`.
-2. **Already-said never repeats.** `_internal/reported_state.json` holds a signature per line the user has been emailed. Seen → suppressed. New → printed and recorded.
+2. **Already-said never repeats.** `_internal/reported-state.json` holds a signature per line the user has been emailed. Seen → suppressed. New → printed and recorded.
 
 **Signatures contain no wording the agent chose.** That is the load-bearing detail. Role titles get rephrased run to run — the same TSMC interview was `NPTD HR intro` one day and `RD Engineer_NPTD AMT` the next, and the same Garmin item was worded three different ways in three consecutive runs. A signature carrying any of that never matches its own previous entry, and the line repeats forever. So a signature is company alias plus a hard value only:
 
@@ -127,7 +127,7 @@ Because the interview signature carries the start time, a **reschedule changes t
 
 Deadlines are the one thing allowed to repeat: a `[NEED ACTION]` item comes back on its deadline day and each day it's overdue — at most once a day, prefixed `DUE TODAY -` / `OVERDUE -` — then stops for good 7 days past due.
 
-**The email still goes out every run** (user's call, 2026-08-24) — a run with nothing new sends the same report with all three sections reading `none`. That mail is a heartbeat: it costs one glance to delete and it makes a *missing* mail unambiguously mean the scan broke, which is the confusion `run_scan.py` exists to prevent. What the filter removes is the body's content, not the send. If `reported_state.json` can't be read or written, the run **reports everything** and says so in `[NEED ACTION]`: a noisy email is recoverable, a swallowed interview invitation isn't.
+**The email still goes out every run** (user's call, 2026-08-24) — a run with nothing new sends the same report with all three sections reading `none`. That mail is a heartbeat: it costs one glance to delete and it makes a *missing* mail unambiguously mean the scan broke, which is the confusion `run_scan.py` exists to prevent. What the filter removes is the body's content, not the send. If `reported-state.json` can't be read or written, the run **reports everything** and says so in `[NEED ACTION]`: a noisy email is recoverable, a swallowed interview invitation isn't.
 
 **The report is wrapped in a ``` fence, on purpose.** `launchd.log` is one long append-only file and the mail body is `text/plain`, so the fence isn't rendered anywhere — it's there as a visible delimiter marking where a run's report begins and ends. Required by `prompt.md` step 6g; `send_email_notification.py` passes the body through verbatim. A `strip_code_fences()` helper existed for about ten minutes on 2026-08-24 on the assumption this was a formatting leak — it was removed, and the sender's docstring says so. Don't re-add it.
 

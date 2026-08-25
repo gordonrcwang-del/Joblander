@@ -9,7 +9,7 @@ Your own material goes here. **Everything in this folder except `BACKGROUND.exam
 | `BACKGROUND.md` | **必要** | 複製 `BACKGROUND.example.md` 改成你自己的。`interview-prep` 的每一個 STAR 答案都從這裡長出來 |
 | `resume.pdf` | 必要 | `autofill-agent` 上傳用 |
 | `resume_zh.pdf` | 選配 | 有中文版就放 |
-| `job_description_<前雇主>.md` | 建議 | 前雇主的職務說明。表單的 Role Description 欄位會逐字引用，比臨場重寫準確得多 |
+| `job-description-<前雇主>.md` | 建議 | 前雇主的職務說明。表單的 Role Description 欄位會逐字引用，比臨場重寫準確得多 |
 
 ## 為什麼 BACKGROUND.md 值得你花一小時寫
 
