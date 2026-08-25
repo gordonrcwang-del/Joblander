@@ -28,6 +28,8 @@
 
 讀 Gmail,把信分成面試邀約／婉拒／offer／測驗四類,更新職缺狀態、寫進行事曆、必要時建面試準備資料夾。**只讀不動 Gmail**,不寄信、不貼標籤、不刪信。
 
+需要在 Claude 的 Settings → Connectors 連上 **Gmail**（唯讀）和 **Google Calendar** —— 跟 SETUP 步驟 2 的 App Password 是兩回事,那個只管寄信。
+
 同一件事只通知你一次 —— 三天的搜尋窗口內同一封信會被讀到六次,去重機制靠的是「公司 + 硬時間戳」這種它自己無法改寫的簽章。
 
 ### 加上四個 Claude Code skill

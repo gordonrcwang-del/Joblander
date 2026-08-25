@@ -1,6 +1,6 @@
 # Setup
 
-Roughly 30 minutes end to end. Steps 1–4 get the job scanner running; 5–6 are for the application autofill and the interview scan.
+Roughly 30 minutes end to end. Steps 1–4 get the job scanner running; 5–7 are for the application autofill and the interview scan.
 
 **macOS only.** The scheduling uses `launchd` and the Gmail password lives in the macOS Keychain. On Linux you'd swap those for cron and a secrets file — the Python itself is portable, nothing else is.
 
@@ -104,7 +104,47 @@ cp automation/job-apply/_internal/applicant_profile.example.json \
 
 ---
 
-## 6. 排程（選配）
+## 6. 連接 Gmail 和 Google Calendar（interview-scan 才需要）
+
+⚠️ **這跟步驟 2 的 App Password 是兩件不同的事,不要搞混:**
+
+| 用途 | 授權方式 |
+|---|---|
+| **寄**掃描報告給你 | 步驟 2 的 App Password（SMTP，存 Keychain） |
+| **讀**你的信箱找面試邀約 | 這一步的 Gmail 連接器（OAuth） |
+| 建立面試行事曆事件 | 這一步的 Google Calendar 連接器 |
+
+只跑 `job-search` 找職缺的話,這步可以跳過 —— 掃描器不碰你的信箱。
+
+### 連接方式
+
+在 Claude（claude.ai 或桌面版）的 **Settings → Connectors** 裡,連接:
+
+- **Gmail** —— interview-scan 只用 `search_threads` 和 `get_thread`,**唯讀**。它不寄信、不貼標籤、不刪信、不改任何東西。報告是走 SMTP 另外寄的。
+- **Google Calendar** —— 用 `list_events`、`create_event`、`update_event`。**只新增和更新,永不刪除**,而且只動 `config.json` 裡那個帳號的行事曆。
+
+連好之後驗證:
+
+```bash
+claude -p "用 ToolSearch 載入 mcp__claude_ai_Gmail__search_threads，然後搜尋 newer_than:1d，只回報找到幾封" \
+  --allowedTools "ToolSearch mcp__claude_ai_Gmail__search_threads"
+```
+
+回得出數字就是通了。
+
+### 一個排程專屬的坑
+
+環境變數 `ENABLE_TOOL_SEARCH=true` 會讓所有 `mcp__*` 工具變成 deferred —— 這時候把它們列在 `--allowedTools` 裡**只是給了權限,並不會讓它們可被呼叫**。agent 會回報「Gmail 工具不可用」然後靜靜地什麼都不做,不會報錯。
+
+解法是 `--allowedTools` 裡**必須同時列出 `ToolSearch`**。`scan_gmail_interviews.sh` 已經這樣寫了,別把它拿掉。
+
+### 排程環境的限制
+
+透過 claude.ai 互動式授權的連接器,在**完全無人的 headless 執行**下不一定拿得到。如果排程跑起來一直回報 Gmail 工具不可用,先手動跑一次 `scan_gmail_interviews.sh` 確認互動模式下正常,再去查排程環境的差異。
+
+---
+
+## 7. 排程（選配）
 
 兩個 launchd job,一個找職缺、一個掃面試信:
 
@@ -148,6 +188,7 @@ log 在 `automation/*/\_internal/logs/launchd.log`。
 ```bash
 python3 automation/job-search/_internal/scan_jobs.py discover   # 應該產出 today-jobs.md
 security find-generic-password -s "job-scan-smtp-app-password" -w  # 應該印出密碼
+claude -p "列出你能用的 Gmail 工具" --allowedTools "ToolSearch mcp__claude_ai_Gmail__search_threads"  # 應該列得出來
 git status                                                       # 不該看到任何個人檔案
 ```
 
