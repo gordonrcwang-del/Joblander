@@ -11,8 +11,26 @@ Roughly 30 minutes end to end. Steps 1–4 get the job scanner running; 5–7 ar
 | 需要 | 檢查指令 | 備註 |
 |---|---|---|
 | Python 3.9+ | `python3 --version` | 掃描器只用標準函式庫,沒有第三方套件 |
-| [Claude Code](https://claude.ai/code) | `which claude` | interview-scan 和所有 skill 都靠它 |
+| Claude Code **CLI** | `claude --version` | interview-scan 和所有 skill 都靠它 |
 | Playwright（選配） | `pip3 install playwright && playwright install chromium` | 只有要自動填申請表才需要 |
+
+### 裝 Claude Code
+
+**CLI 是必要的,不是選配。** launchd 排程直接呼叫 `claude -p`,沒有 CLI 的話 `interview-scan` 裝不起來,只剩 `job-search` 能跑。
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash    # 原生安裝，裝到 ~/.local/bin/claude
+npm install -g @anthropic-ai/claude-code          # 已經有 node 的話
+```
+
+裝完**重開終端機**再 `claude --version`。
+
+介面另外挑,兩個都是加在 CLI 上面的,不是替代:
+
+- **VS Code 擴充**（推薦）—— 擴充商店搜 Claude Code。邊看檔案邊改,設定過程中要確認 `applicant-profile.json` 的時候特別有感
+- **桌面版** —— [claude.ai/download](https://claude.ai/download)。不想碰編輯器就用這個
+
+只裝桌面版、沒裝 CLI 的話,`command -v claude` 會查不到,步驟 7 的排程整段會失敗。
 
 Clone 下來之後,**先把整個資料夾放到你想長期擺的位置再開始** —— launchd 排程會記住絕對路徑,之後搬家要重設。
 
@@ -69,11 +87,38 @@ cp automation/job-search/job-criteria.example.md automation/job-search/job-crite
 
 編輯 `automation/job-search/_internal/sources.json`。**這是整個系統唯一的公司清單來源** —— 掃描器、interview-scan 的 Gmail 搜尋、SOP 覆蓋層命名全部從它衍生。加一家公司只要改這一個檔。
 
-預設附了四家半導體設備商（KLA、Applied Materials、ASML、Lam Research）。要換產業就整批替換掉。
+預設附了四家半導體設備商,實際會跑的是三家:
 
-**ASML 那筆的 `auth_token` 是佔位符,要自己抓。** 它是 ASML 職涯網站前端 JS 內建的公開 search-only key,每個訪客都拿到同一個,不是登入憑證 —— 但公開 repo 裡不放實際字串,免得被 secret scanner 誤判成外洩。抓法:開 https://www.asml.com/en/careers/find-your-job,開瀏覽器 DevTools 的 Network 分頁,搜尋職缺,找往 `discover-euc1.sitecorecloud.io` 的請求,從 request header 或 query string 裡把 token 複製出來。
+| 公司 | adapter | 狀態 |
+|---|---|---|
+| KLA | `workday` | 啟用 |
+| Applied Materials | `eightfold` | 啟用 |
+| ASML | `sitecore_discover` | 啟用,但要自己補 token（見下） |
+| Lam Research | `unknown` | `enabled: false` —— adapter 還沒實作,`/api/apply/v2/jobs` 的正確參數要重抓封包 |
 
-不想處理就把那筆設 `"enabled": false`,其他家照跑。
+要換產業就整批替換掉。
+
+### ASML 的 `auth_token` 要自己抓
+
+`sources.json` 裡 ASML 那筆的 `auth_token` 是佔位符。它是 ASML 職涯網站前端 JS 內建的公開 search-only key,每個訪客都拿到同一個,不是登入憑證 —— 但公開 repo 裡不放實際字串,免得被 secret scanner 誤判成外洩。
+
+抓法:開 https://www.asml.com/en/careers/find-your-job,開瀏覽器 DevTools 的 Network 分頁,搜尋職缺,找往 `discover-euc1.sitecorecloud.io` 的請求,從 request header 或 query string 裡把 token 複製出來。
+
+**抓到的 token 填進 `config.json`,不是填回 `sources.json`:**
+
+```json
+{
+  "source_secrets": {
+    "asml": { "auth_token": "01-<你抓到的字串>" }
+  }
+}
+```
+
+`load_sources()` 會在載入時把 `source_secrets` 依 company id 疊到那家的 `config` 區塊上(`scan_jobs.py:44`)。`sources.json` 是公開檔、留著佔位符不用動;`config.json` 是 gitignore 的,token 不會進 repo。**直接改 `sources.json` 也會動,但那個檔會被 commit** —— 別這樣做。
+
+同一個機制適用之後任何一家需要 key 的公司:`sources.json` 放佔位符,`config.json` 放真值。
+
+不想處理就把 `sources.json` 裡 ASML 那筆設 `"enabled": false`,其他兩家照跑。
 
 ### 第一次跑
 

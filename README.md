@@ -14,7 +14,7 @@
 
 直接打各家 ATS 自己的公開 JSON API（Workday、Eightfold、Sitecore Discover),不開瀏覽器、不裝第三方套件。抓回來的職缺用你寫的條件篩過,產出一份勾選清單並寄到你信箱。
 
-只寄**變化的部分**。今天沒有新職缺就完全不寄信 —— 一份九成都是你已經知道的事的報告,會訓練你不再打開它。
+信裡**只列這次新發現的**,已經看過的職缺不再重複出現 —— 一份九成都是你已經知道的事的報告,會訓練你不再打開它。沒有新職缺時信照寄,內容是 `New candidates: none`,那一行同時也是「排程還活著」的訊號。
 
 ### 2. `job-apply` —— 自動填申請表
 
@@ -45,14 +45,35 @@
 
 ## 開始
 
+### 先裝 Claude Code
+
+整套東西是 Claude Code 的 skill,沒有它跑不起來。**CLI 是必要的** —— 排程靠 `claude -p`:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash    # 原生安裝
+npm install -g @anthropic-ai/claude-code          # 已經有 node 的話
+```
+
+裝完重開終端機,`claude --version` 印得出版號就對了。
+
+想用得順手一點,再加一個介面 —— 兩個都是**額外的,不是替代 CLI**:
+
+| 介面 | 適合 | 怎麼裝 |
+|---|---|---|
+| **VS Code 擴充**（推薦） | 想邊看檔案邊改 | VS Code 擴充商店搜 Claude Code |
+| **桌面版** | 不想碰編輯器 | [claude.ai/download](https://claude.ai/download) |
+
+### 再裝 Joblander
+
 ```bash
 git clone https://github.com/gordonrcwang-del/Joblander.git
 cd Joblander
-cp config.example.json config.json          # 填你的 Gmail
-python3 automation/job-search/_internal/scan_jobs.py discover
+claude
 ```
 
-完整步驟看 **[docs/SETUP.md](docs/SETUP.md)** —— 大約 30 分鐘,含 Keychain 設定和 launchd 排程。
+然後在 Claude Code 裡打 `/setup`,它會帶你走完設定 —— 問你 Gmail、收你的履歷 PDF、把 `applicant-profile.json` 和 `job-criteria.md` 生出來、跑第一次掃描,每個階段都驗過才往下。
+
+想自己手動裝就看 **[docs/SETUP.md](docs/SETUP.md)** —— 大約 30 分鐘,含 Keychain 設定和 launchd 排程。
 
 ---
 
@@ -62,7 +83,7 @@ python3 automation/job-search/_internal/scan_jobs.py discover
 
 | 檔案 | 內容 | 附範例 |
 |---|---|---|
-| `config.json` | Gmail 位址、排程名稱 | `config.example.json` |
+| `config.json` | Gmail 位址、排程名稱、各家 ATS 的 API token | `config.example.json` |
 | `background/BACKGROUND.md` | 履歷敘事、STAR 故事 | `BACKGROUND.example.md` |
 | `automation/job-apply/_internal/applicant-profile.json` | 表單欄位資料 | `applicant-profile.example.json` |
 | `automation/job-apply/_internal/sop/_local/` | 各公司申請表的實際操作步驟 | `_local/README.md` |
