@@ -637,6 +637,51 @@ def load_ledger():
         return json.load(f)
 
 
+THIN_STATES = ("rejected", "skipped")
+THIN_KEEP = ("state", "title", "first_seen", "state_changed", "last_seen")
+
+
+def _screen_cause(screen):
+    """Which of the five screening rules actually rejected a posting. The screen
+    block never flags the deciding rule directly, so it's inferred from which
+    keys are present: title_reject_screen bails before any location/education
+    work, location before education, and degree/years carry their own verdict."""
+    for field in ("years", "degree"):
+        sub = screen.get(field)
+        if isinstance(sub, dict) and sub.get("verdict") == "reject":
+            return field
+    if "education_rule" in screen and "location_rule" in screen:
+        return "education_rule"
+    if "location_rule" in screen and "title_rule" not in screen:
+        return "location_rule"
+    if "title_rule" in screen:
+        return "title_rule"
+    return None
+
+
+def thin_job(job):
+    """rejected/skipped jobs are dead weight stored in full: render() never draws
+    them, and backfill re-fetches from the live ATS rather than reading cached
+    fields, so nothing outside these keys is ever read back. Trimmed 2026-08-25
+    on the user's call (494 KB -> 188 KB) because the file had become too big to
+    read. state/first_seen/state_changed must survive — _write_record reads all
+    three as bare subscripts and would KeyError without them."""
+    if job.get("state") not in THIN_STATES:
+        return job
+    screen = job.get("screen") or {}
+    verdict = screen.get("verdict")
+    if verdict == "unsure":  # retired 2026-08-21, see cmd_mark's valid_states
+        verdict = "pass"
+    thin_screen = {"verdict": verdict}
+    if verdict == "reject":
+        cause = _screen_cause(screen)
+        if cause:
+            thin_screen["rule"] = cause
+    out = {k: job[k] for k in THIN_KEEP if k in job}
+    out["screen"] = thin_screen
+    return out
+
+
 def save_ledger(ledger):
     if os.path.exists(LEDGER_PATH):
         with open(LEDGER_PATH, encoding="utf-8") as f:
@@ -645,7 +690,9 @@ def save_ledger(ledger):
             f.write(backup)
     tmp_path = LEDGER_PATH + ".tmp"
     with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(ledger, f, ensure_ascii=False, indent=2, sort_keys=True)
+        payload = dict(ledger)
+        payload["jobs"] = {k: thin_job(v) for k, v in ledger["jobs"].items()}
+        json.dump(payload, f, ensure_ascii=False, indent=2, sort_keys=True)
     os.replace(tmp_path, LEDGER_PATH)
 
 
