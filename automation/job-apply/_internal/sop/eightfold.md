@@ -1,5 +1,5 @@
 **Applies to**: any Eightfold.ai-hosted application form — typically `careers.<employer>.com/careers/apply` or `/careerhub/` paths.
-**Data source**: `automation/job-apply/_internal/applicant_profile.json` + the employer's own persistent Eightfold profile (Eightfold stores your details per employer and refills them on every subsequent application).
+**Data source**: `automation/job-apply/_internal/applicant-profile.json` + the employer's own persistent Eightfold profile (Eightfold stores your details per employer and refills them on every subsequent application).
 **Employer-specific answers**: `sop/_local/<company_id>-eightfold.md` — see *Employer overlays* at the bottom. That file is gitignored; this one is not.
 
 > **Watch for fake Workday mirrors.** Some employers on Eightfold also expose a `<tenant>.wd1.myworkdayjobs.com/External` site that looks live but carries no matching real postings. Confirm which host the employer's own careers page actually links to before treating either as canonical, and record the answer in the overlay.
@@ -45,7 +45,7 @@ Check specifically:
 | Legal First / Last Name | CJK characters are **rejected at submit**, and the error message misleadingly blames punctuation. Use the romanized legal name from `legal_name.family_en` / `given_en` |
 | "Given Name - Western Script" | This is the **preferred** name field — your everyday English name, not your romanized legal given name. It has defaulted to the legal name before; check it, don't assume either way |
 | Resume filename | Surfaced verbatim to the recruiter on some tenants |
-| Phone, address | Format varies by tenant — see `applicant_profile.json`'s `contact.note` / `address.note` |
+| Phone, address | Format varies by tenant — see `applicant-profile.json`'s `contact.note` / `address.note` |
 | "How Did You Hear About Us?" | Usually `<Employer> Corporate Website` for a posting found on their own site |
 | Terms and Conditions | Must be ticked; see the checkbox caveat in Notes |
 
@@ -61,13 +61,13 @@ Target these by **full `aria-label`** — option text plus the entire question t
 
 Two traps seen here:
 - A question worded as multi-select ("choose **all** cities that apply") whose underlying inputs are `type="radio"` sharing one `name` — it is actually single-select, and picking a second option silently deselects the first.
-- Language-proficiency band questions where the bands are named by test score. Match the band to the score in `applicant_profile.json`'s `languages[].note`, don't eyeball it.
+- Language-proficiency band questions where the bands are named by test score. Match the band to the score in `applicant-profile.json`'s `languages[].note`, don't eyeball it.
 
 If the employer has a standing answer for one of these (a preferred site, a fixed location choice), record it in the overlay so it isn't re-decided per application.
 
 **STEP 5 — Submit**
 
-Check `auto_submit_config.json` for this `company_id`. Default (`"confirm"`, missing key, or missing file): show the user the complete filled application and get an explicit **yes** first.
+Check `auto-submit-config.json` for this `company_id`. Default (`"confirm"`, missing key, or missing file): show the user the complete filled application and get an explicit **yes** first.
 ```json
 {"action": "click", "role": "button", "name": "Submit application"}
 {"action": "click", "role": "button", "name": "Continue"}

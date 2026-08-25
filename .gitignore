@@ -12,12 +12,12 @@ config.json
 .claude/settings.local.json
 
 # Résumé, certificates, narrative background
-Background Informations/*
-!Background Informations/BACKGROUND.example.md
-!Background Informations/README.md
+background/*
+!background/BACKGROUND.example.md
+!background/README.md
 
 # Structured autofill data
-automation/job-apply/_internal/applicant_profile.json
+automation/job-apply/_internal/applicant-profile.json
 
 # Per-employer application walkthroughs
 automation/job-apply/_internal/sop/_local/*
@@ -39,10 +39,10 @@ automation/job-search/archive/
 
 # Interview prep: every company folder is personal.
 # Only the generic question list ships.
-interview_prep/*/
-!interview_prep/General/
-interview_prep/General/*
-!interview_prep/General/通用反問清單.md
+interview-prep/*/
+!interview-prep/general/
+interview-prep/general/*
+!interview-prep/general/通用反問清單.md
 
 # Client lists, spreadsheets, derived knowledge-graph index
 Appendix/

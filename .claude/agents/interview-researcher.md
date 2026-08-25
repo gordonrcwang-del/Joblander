@@ -1,6 +1,6 @@
 ---
 name: interview-researcher
-description: Researches and writes ONE interview-prep file (company_brief.md, position_intro.md, 模擬面試_QA.md, or 基本知識.md) into an existing interview_prep/<Company>/<Position>/ folder. Spawned by the interview-prep skill, two at a time. Not for general research — it only writes the four file types that skill defines.
+description: Researches and writes ONE interview-prep file (company_brief.md, position_intro.md, 模擬面試_QA.md, or 基本知識.md) into an existing interview-prep/<Company>/<Position>/ folder. Spawned by the interview-prep skill, two at a time. Not for general research — it only writes the four file types that skill defines.
 tools: Read, Write, WebSearch, WebFetch, Glob, Grep
 ---
 

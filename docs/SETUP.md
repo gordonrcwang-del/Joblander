@@ -88,19 +88,19 @@ python3 automation/job-search/_internal/scan_jobs.py discover
 ## 5. 你自己的資料（申請表自動填 + 面試準備才需要）
 
 ```bash
-cp "Background Informations/BACKGROUND.example.md" "Background Informations/BACKGROUND.md"
-cp automation/job-apply/_internal/applicant_profile.example.json \
-   automation/job-apply/_internal/applicant_profile.json
+cp "background/BACKGROUND.example.md" "background/BACKGROUND.md"
+cp automation/job-apply/_internal/applicant-profile.example.json \
+   automation/job-apply/_internal/applicant-profile.json
 ```
 
 兩個都要從頭改成你自己的。分工是:
 
-- **`applicant_profile.json`** —— 表單欄位。姓名、地址、電話、學歷、工作經歷、簽證答案。結構化,給機器填表用。
+- **`applicant-profile.json`** —— 表單欄位。姓名、地址、電話、學歷、工作經歷、簽證答案。結構化,給機器填表用。
 - **`BACKGROUND.md`** —— 敘事。STAR 故事、優缺點、離職原因、動機。給 `interview-prep` 生成面試題答案用。
 
 ⚠️ **`BACKGROUND.md` 值得你花一小時認真寫。** 這是整個系統唯一無法自動生成的東西 —— 公司資料、職缺內容、論壇風評系統都會自己查,查不到的只有你做過什麼、數字是多少。寫得含糊,產出的模擬面試答案就一樣含糊。
 
-履歷 PDF 也放進 `Background Informations/`,路徑填回 `applicant_profile.json` 的 `resume.path`。整個資料夾除了 `.example` 檔以外都被 gitignore。
+履歷 PDF 也放進 `background/`,路徑填回 `applicant-profile.json` 的 `resume.path`。整個資料夾除了 `.example` 檔以外都被 gitignore。
 
 ---
 
@@ -136,11 +136,11 @@ claude -p "用 ToolSearch 載入 mcp__claude_ai_Gmail__search_threads，然後�
 
 環境變數 `ENABLE_TOOL_SEARCH=true` 會讓所有 `mcp__*` 工具變成 deferred —— 這時候把它們列在 `--allowedTools` 裡**只是給了權限,並不會讓它們可被呼叫**。agent 會回報「Gmail 工具不可用」然後靜靜地什麼都不做,不會報錯。
 
-解法是 `--allowedTools` 裡**必須同時列出 `ToolSearch`**。`scan_gmail_interviews.sh` 已經這樣寫了,別把它拿掉。
+解法是 `--allowedTools` 裡**必須同時列出 `ToolSearch`**。`scan-gmail-interviews.sh` 已經這樣寫了,別把它拿掉。
 
 ### 排程環境的限制
 
-透過 claude.ai 互動式授權的連接器,在**完全無人的 headless 執行**下不一定拿得到。如果排程跑起來一直回報 Gmail 工具不可用,先手動跑一次 `scan_gmail_interviews.sh` 確認互動模式下正常,再去查排程環境的差異。
+透過 claude.ai 互動式授權的連接器,在**完全無人的 headless 執行**下不一定拿得到。如果排程跑起來一直回報 Gmail 工具不可用,先手動跑一次 `scan-gmail-interviews.sh` 確認互動模式下正常,再去查排程環境的差異。
 
 ---
 
@@ -177,7 +177,7 @@ EOF
 ### 兩個踩過的坑
 
 1. **不要讓 launchd 直接跑 `/bin/bash`。** macOS TCC 不准 bash 存取 `~/Desktop` 和 `~/Documents`,job 會在第一行之前就 exit 126。指向 `python3` 包一層,由它去叫 shell script。
-2. **`claude -p` 要用絕對路徑。** launchd 的 PATH 很精簡。`which claude` 查出來,設進 `CLAUDE_BIN` 環境變數或直接改 `scan_gmail_interviews.sh`。
+2. **`claude -p` 要用絕對路徑。** launchd 的 PATH 很精簡。`which claude` 查出來,設進 `CLAUDE_BIN` 環境變數或直接改 `scan-gmail-interviews.sh`。
 
 log 在 `automation/*/\_internal/logs/launchd.log`。
 

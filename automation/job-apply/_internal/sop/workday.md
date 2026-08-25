@@ -1,5 +1,5 @@
 **Applies to**: any Workday-hosted application form — `<tenant>.wd1.myworkdayjobs.com`, `wd3.`, `wd5.` etc. Some employers front it with their own careers site; the real ATS is still Workday (Step 0 shows how to find the real Apply link).
-**Data source**: `automation/job-apply/_internal/applicant_profile.json`
+**Data source**: `automation/job-apply/_internal/applicant-profile.json`
 **Employer-specific answers**: `sop/_local/<company_id>-workday.md` — see *Tenant overlays* at the bottom. That file is gitignored; this one is not.
 
 ---
@@ -140,7 +140,7 @@ For self-ID dropdowns (gender, veteran status, disability), do **not** use `choo
 
 The `wait_for_text` result from Step 6 already carries the full review page — read it from there rather than spending another `get_state`.
 
-Check `auto_submit_config.json` for this `company_id`. Default (`"confirm"`, missing key, or missing file): show the user the complete filled application and get an explicit **yes** before clicking Submit. Only under `"auto"` do you submit first and show the content afterwards.
+Check `auto-submit-config.json` for this `company_id`. Default (`"confirm"`, missing key, or missing file): show the user the complete filled application and get an explicit **yes** before clicking Submit. Only under `"auto"` do you submit first and show the content afterwards.
 ```json
 {"action": "click", "role": "button", "name": "Submit"}
 {"action": "wait_for_text", "text": "Under Review"}

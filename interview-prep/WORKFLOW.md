@@ -39,7 +39,7 @@ flowchart TD
 ## What gets created
 
 ```
-interview_prep/
+interview-prep/
 └── <Company>/
     ├── company_brief.md          ← what the company does (once per company)
     └── <Position>/

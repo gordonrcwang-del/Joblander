@@ -1,5 +1,5 @@
 {
-  "_purpose": "EXAMPLE FILE — copy to applicant_profile.json in this same folder and replace every value with your own. applicant_profile.json is gitignored. This is the fast path autofill-agent reads before touching any application form, so it never has to re-parse BACKGROUND.md prose for a field that is already structured here. All values below are fictional.",
+  "_purpose": "EXAMPLE FILE — copy to applicant-profile.json in this same folder and replace every value with your own. applicant-profile.json is gitignored. This is the fast path autofill-agent reads before touching any application form, so it never has to re-parse BACKGROUND.md prose for a field that is already structured here. All values below are fictional.",
 
   "_why_so_many_name_and_phone_variants": "ATS platforms disagree about format and some reject silently. Workday wants a leading zero on the local phone number, Eightfold rejects CJK characters in Legal Name fields, some forms want the country code as a dropdown label rather than a +number. Recording every variant once here is cheaper than rediscovering it mid-application.",
 
@@ -99,7 +99,7 @@
         "end": "2025-06",
         "location": "Hsinchu, Taiwan",
         "employment_type": "Full-time",
-        "role_description_source": "Background Informations/job_description_crystal_opto.md — quote its bullets verbatim, do not paraphrase them into the form."
+        "role_description_source": "background/job_description_crystal_opto.md — quote its bullets verbatim, do not paraphrase them into the form."
       },
       {
         "company": "Republic of China Army",
@@ -127,7 +127,7 @@
   },
 
   "resume": {
-    "path": "Background Informations/resume.pdf",
+    "path": "background/resume.pdf",
     "filename_warning": "Some ATS surface the uploaded filename to the recruiter verbatim. Name the file something you would be happy for them to read — 'resume_v7_FINAL_fix2.pdf' is a real own-goal."
   }
 }

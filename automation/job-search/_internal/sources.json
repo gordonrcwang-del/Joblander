@@ -1,5 +1,5 @@
 {
-  "_readme": "SINGLE SOURCE OF TRUTH for which employers this system knows about. Everything else derives from it: the job scanner iterates it, auto_submit_config.json keys match its `id`s, the interview scan builds its Gmail search from `name` + `aliases`, and SOP overlays are named `<id>-<platform>.md`. To target a different industry or a different set of companies, edit this file — you should not have to touch any prompt or script.",
+  "_readme": "SINGLE SOURCE OF TRUTH for which employers this system knows about. Everything else derives from it: the job scanner iterates it, auto-submit-config.json keys match its `id`s, the interview scan builds its Gmail search from `name` + `aliases`, and SOP overlays are named `<id>-<platform>.md`. To target a different industry or a different set of companies, edit this file — you should not have to touch any prompt or script.",
 
   "_adding_a_company": "Add an entry with a unique lowercase `id`, a display `name`, any `aliases` recruiters actually use in email, and an `adapter`. Park one you haven't reverse-engineered yet with `enabled: false` + `adapter: \"unknown\"` — the scanner skips it, but the interview scan still recognises its name in your inbox. Supported adapters: `workday`, `eightfold`, `sitecore_discover`.",
 

@@ -18,9 +18,9 @@
 
 ### 2. `job-apply` —— 自動填申請表
 
-一個常駐的 Playwright 瀏覽器,由檔案佇列驅動,把 `applicant_profile.json` 的內容填進申請表。
+一個常駐的 Playwright 瀏覽器,由檔案佇列驅動,把 `applicant-profile.json` 的內容填進申請表。
 
-**送出前一定會停下來等你點頭**（除非你自己在 `auto_submit_config.json` 裡對特定公司改成自動）。**OAuth 登入永遠是你手動做** —— 那是真的安全機制,不繞過。
+**送出前一定會停下來等你點頭**（除非你自己在 `auto-submit-config.json` 裡對特定公司改成自動）。**OAuth 登入永遠是你手動做** —— 那是真的安全機制,不繞過。
 
 平台 quirk 累積在 `sop/workday.md` 和 `sop/eightfold.md` 裡:哪個下拉選單會靜默選錯、哪個 checkbox 的 `value` 屬性在說謊、哪個 `wait_for_text` 錨點會提早回傳。這些是踩出來的,不是讀文件讀來的。
 
@@ -63,11 +63,11 @@ python3 automation/job-search/_internal/scan_jobs.py discover
 | 檔案 | 內容 | 附範例 |
 |---|---|---|
 | `config.json` | Gmail 位址、排程名稱 | `config.example.json` |
-| `Background Informations/BACKGROUND.md` | 履歷敘事、STAR 故事 | `BACKGROUND.example.md` |
-| `automation/job-apply/_internal/applicant_profile.json` | 表單欄位資料 | `applicant_profile.example.json` |
+| `background/BACKGROUND.md` | 履歷敘事、STAR 故事 | `BACKGROUND.example.md` |
+| `automation/job-apply/_internal/applicant-profile.json` | 表單欄位資料 | `applicant-profile.example.json` |
 | `automation/job-apply/_internal/sop/_local/` | 各公司申請表的實際操作步驟 | `_local/README.md` |
 
-再加上執行時產生的 `ledger.json`（投遞紀錄）、`today-jobs.md`、`interview_prep/<公司>/`,全部 ignore。
+再加上執行時產生的 `ledger.json`（投遞紀錄）、`today-jobs.md`、`interview-prep/<公司>/`,全部 ignore。
 
 **Gmail 密碼不存在任何檔案裡** —— 放 macOS Keychain,腳本要寄信時才去讀。
 

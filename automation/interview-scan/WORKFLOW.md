@@ -54,7 +54,7 @@ flowchart TD
 automation/interview-scan/
 └── _internal/                       ← not meant for casual reading — engine, script, logs
     ├── run_scan.py                     ← what launchd actually runs (see below)
-    ├── scan_gmail_interviews.sh        ← the claude -p invocation, run BY run_scan.py
+    ├── scan-gmail-interviews.sh        ← the claude -p invocation, run BY run_scan.py
     ├── prompt.md                       ← instructions given to the headless run each time (read)
     ├── send_email_notification.py      ← sends the summary email, on runs that have one to send
     ├── reported_state.json              ← every line already emailed; read + rewritten each run
@@ -63,8 +63,8 @@ automation/interview-scan/
 macOS Keychain
 └── "job-scan-smtp-app-password"   ← same Gmail App Password as job-search's email (read, never written)
 
-interview_prep/General/面試行程.md              ← read every run, written only when something's new/changed
-interview_prep/<Company>/<Position>/   ← created by /interview-prep, only for genuinely new invitations
+interview-prep/general/面試行程.md              ← read every run, written only when something's new/changed
+interview-prep/<Company>/<Position>/   ← created by /interview-prep, only for genuinely new invitations
 ├── company_brief.md
 ├── position_intro.md
 ├── 模擬面試_QA.md
@@ -83,7 +83,7 @@ Google Calendar (<your-gmail-address>)
 
 Deliberately **:20 past the hour**, not on the hour: `com.example.jobdiscover` runs at 08:00/13:00 and writes `ledger.json` via `discover`, while this scan writes the same file via `progress`. They used to fire in the same minute, so a status update and a discovery run could clobber each other. Changed 2026-08-17 — keep the gap if you ever retime either job.
 
-Read-only on Gmail (never sends/labels/deletes) — the outgoing email is sent via direct SMTP, not the Gmail connector. File writes are limited to `面試行程.md`, `_internal/reported_state.json`, whatever `/interview-prep` creates under `interview_prep/<Company>/<Position>/`, and — only via that one `scan_jobs.py progress` command, never a direct edit — `ledger.json`/`applied-jobs.md`. The run is restricted to exactly those tools, so there's no path for it to touch anything else even unattended.
+Read-only on Gmail (never sends/labels/deletes) — the outgoing email is sent via direct SMTP, not the Gmail connector. File writes are limited to `面試行程.md`, `_internal/reported_state.json`, whatever `/interview-prep` creates under `interview-prep/<Company>/<Position>/`, and — only via that one `scan_jobs.py progress` command, never a direct edit — `ledger.json`/`applied-jobs.md`. The run is restricted to exactly those tools, so there's no path for it to touch anything else even unattended.
 
 ## Outcome tracking (added 2026-08-17)
 

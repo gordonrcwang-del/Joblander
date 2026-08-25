@@ -20,7 +20,7 @@ flowchart TD
     J --> K
 
     K --> L["👀 I show you the<br/>whole filled form"]
-    L --> M{"auto_submit_config:<br/>this company set<br/>to auto?"}
+    L --> M{"auto-submit-config:<br/>this company set<br/>to auto?"}
     M -->|no, default| N["Wait for your<br/>explicit yes"]
     M -->|yes| O["Skip the wait"]
     N --> P
@@ -45,12 +45,12 @@ flowchart TD
 automation/job-apply/
 └── _internal/                       ← not meant for casual reading — engine + data
     ├── playwright_script.py            ← the engine that drives the browser
-    ├── applicant_profile.json          ← your info (read, not written)
-    ├── auto_submit_config.json         ← per-company auto vs. ask-first (read)
+    ├── applicant-profile.json          ← your info (read, not written)
+    ├── auto-submit-config.json         ← per-company auto vs. ask-first (read)
     └── sop/<company>-<platform>.md     ← saved steps for that company's form
                                             (written the first time, reused after)
 ```
 
-Nothing gets submitted without you seeing the filled form first — unless that specific company is explicitly flagged `auto` in `auto_submit_config.json`, and even then you still get shown what was sent, right after.
+Nothing gets submitted without you seeing the filled form first — unless that specific company is explicitly flagged `auto` in `auto-submit-config.json`, and even then you still get shown what was sent, right after.
 
 Reorganized 2026-08-17: everything the agent reads/writes moved into `_internal/`; only this WORKFLOW.md stays at the top level.

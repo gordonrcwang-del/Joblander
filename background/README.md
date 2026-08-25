@@ -1,4 +1,4 @@
-# Background Informations
+# background
 
 Your own material goes here. **Everything in this folder except `BACKGROUND.example.md` and this README is gitignored** — it stays on your machine.
 

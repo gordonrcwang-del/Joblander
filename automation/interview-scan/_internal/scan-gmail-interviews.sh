@@ -1,6 +1,6 @@
 #!/bin/bash
 # Scans Gmail for application-state-changing email and updates
-# interview_prep/General/面試行程.md, Google Calendar, and the job ledger.
+# interview-prep/general/面試行程.md, Google Calendar, and the job ledger.
 #
 # NOT invoked directly by launchd. com.example.interviewscan runs
 # run_scan.py (via /opt/homebrew/bin/python3) at 08:20 and 13:20, and that

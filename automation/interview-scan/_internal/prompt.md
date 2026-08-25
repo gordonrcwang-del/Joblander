@@ -1,7 +1,7 @@
 You are running unattended (no human present to answer questions). Do the following and nothing else.
 
 ## Goal
-Check Gmail for anything that changes the state of an application — interview scheduling, rejections, offers, assessment requests. Keep `interview_prep/General/面試行程.md` current, make sure each interview exists on Google Calendar, keep the job ledger's status honest. Then send exactly one email every run. Its **body carries only what changed since the last run** — re-telling the user what they already know is the failure mode this scan is tuned against — but the mail itself always goes out, even when that means three empty sections, so a missing mail always means the scan broke.
+Check Gmail for anything that changes the state of an application — interview scheduling, rejections, offers, assessment requests. Keep `interview-prep/general/面試行程.md` current, make sure each interview exists on Google Calendar, keep the job ledger's status honest. Then send exactly one email every run. Its **body carries only what changed since the last run** — re-telling the user what they already know is the failure mode this scan is tuned against — but the mail itself always goes out, even when that means three empty sections, so a missing mail always means the scan broke.
 
 ## Steps
 
@@ -12,7 +12,7 @@ Check Gmail for anything that changes the state of an application — interview 
    If that call does not return the Gmail tools, stop: do not silently continue and report an empty scan — that would look identical to a clean one. Emit the step 6 report with `Gmail search: FAILED (MCP tools did not load)`, send it, and exit.
 
 1. Read two files — together they are everything a previous run already knew:
-   - `interview_prep/General/面試行程.md` in full — the current schedule state (dates, times, formats, interviewers).
+   - `interview-prep/general/面試行程.md` in full — the current schedule state (dates, times, formats, interviewers).
    - `automation/interview-scan/_internal/reported_state.json` — every line any previous run has already put in the user's inbox. Step 6 uses it to keep the email down to what actually changed. If the file is missing or unparseable, treat it as `{"version": 1, "entries": {}}` and carry on; step 6d says what to do about it.
 
 2. Search Gmail for application-related email from the last 3 days. Two searches, because the vocabularies barely overlap:
@@ -32,7 +32,7 @@ Check Gmail for anything that changes the state of an application — interview 
 
    Buckets B, C and D are handled in step 5.7. For bucket A, continue:
 
-4. Extract, if present: company, role, interview date, time, format (phone/video/onsite), location, interviewer names, recruiter/contact name and email, and any explicit instructions (e.g. "bring ID"). Then compare against what's already in `interview_prep/General/面試行程.md`.
+4. Extract, if present: company, role, interview date, time, format (phone/video/onsite), location, interviewer names, recruiter/contact name and email, and any explicit instructions (e.g. "bring ID"). Then compare against what's already in `interview-prep/general/面試行程.md`.
    - If the info is already reflected there (same date/time/details), skip it — do not duplicate.
    - If it's genuinely new (a new interview) or changed (rescheduled, new interviewer added), update the file: add or edit a row in the `已確認排程` table, following the existing table's exact column format and Chinese phrasing style. **The `形式` cell must be a markdown link to the meeting URL for anything online** — `[一面／線上](https://teams.microsoft.com/...)` — so the row is one click from joining. In-person interviews stay plain text, no link. If the invitation has no URL yet, leave the cell plain rather than inventing one, and say so in [INTERVIEW]. Move a company out of `尚無排程 / 待追蹤` into the scheduled table if it now has a date.
    - Do not remove or alter rows that are still accurate.
@@ -161,7 +161,7 @@ Check Gmail for anything that changes the state of an application — interview 
 ## Constraints
 - Read-only on Gmail — never send, label, or modify any email.
 - On Google Calendar: create and update only, and only on `<your-gmail-address>`. Never delete an event, never add attendees (that would send an invitation to a recruiter), never touch an event unrelated to an interview.
-- File writes are limited to `interview_prep/General/面試行程.md`, `automation/interview-scan/_internal/reported_state.json`, whatever `interview-prep` itself writes under `interview_prep/<Company>/<Position>/`, and — only via the exact `scan_jobs.py progress` command in steps 5.5 and 5.7, never a direct edit — `automation/job-search/_internal/ledger.json` / `applied-jobs.md`. Nothing outside that.
+- File writes are limited to `interview-prep/general/面試行程.md`, `automation/interview-scan/_internal/reported_state.json`, whatever `interview-prep` itself writes under `interview-prep/<Company>/<Position>/`, and — only via the exact `scan_jobs.py progress` command in steps 5.5 and 5.7, never a direct edit — `automation/job-search/_internal/ledger.json` / `applied-jobs.md`. Nothing outside that.
 - Suppressing a line from the email never means skipping the work behind it. Still update `面試行程.md`, still create the calendar event, still file the ledger status — step 6's filter is about the report only. A no-op is quiet because nothing changed, never because you decided not to check.
 - A wrong ledger key is worse than a missed update: the missed one gets caught by the next email or by you, the wrong one silently marks a live application dead. When the match isn't certain, skip and report.
 - Don't ask questions — you're unattended. If something is ambiguous, make the conservative choice (don't guess at missing details; leave a field out or a clear TODO note rather than inventing one) and proceed.

@@ -15,7 +15,7 @@ WHY THIS EXISTS (two reasons, both learned the hard way on 2026-08-18)
    /opt/homebrew/bin/python3. Do not "simplify" the plist back to /bin/bash.
 
 2. Failure heartbeat. The scan's own success email is sent at the last step of
-   scan_gmail_interviews.sh, so any crash means silence — and silence is
+   scan-gmail-interviews.sh, so any crash means silence — and silence is
    exactly what a quiet job-market day looks like. That is why reason 1 went
    unnoticed. A `trap` inside the shell script could not have caught it either
    (the script never started). The heartbeat therefore lives HERE, outside the
@@ -28,7 +28,7 @@ import time
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
-SCAN_SCRIPT = os.path.join(BASE_DIR, "scan_gmail_interviews.sh")
+SCAN_SCRIPT = os.path.join(BASE_DIR, "scan-gmail-interviews.sh")
 EMAIL_SCRIPT = os.path.join(BASE_DIR, "send_email_notification.py")
 
 TIMEOUT_SECONDS = 20 * 60  # a claude -p agent run; well past the ~2-4 min it needs
@@ -149,7 +149,7 @@ def main():
     send_failure_email(
         "\u26a0\ufe0f Interview scan %s - %s" % (label, run_ts),
         "=== interview-scan %s ===\n"
-        "scan_gmail_interviews.sh did not finish on any of %d attempts (last exit code %d).\n"
+        "scan-gmail-interviews.sh did not finish on any of %d attempts (last exit code %d).\n"
         "No success mail != no news today; the scan itself broke.\n"
         "Retry gap %d min, all attempts failed. Next scan waits for the next scheduled slot.\n\n"
         "Last output:\n%s\n\nlog: %s"

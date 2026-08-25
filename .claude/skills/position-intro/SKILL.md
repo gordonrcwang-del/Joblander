@@ -1,11 +1,11 @@
 ---
 name: position-intro
-description: "Research a job posting the user just pasted (URL or raw JD text) and output a position_intro.md-style summary directly in the chat reply — never write it to a file. Covers JD summary (role + core responsibilities, work-mix table) plus a synthesis of what Taiwan forums (Dcard/PTT/104/518/Mobile01) say about WLB, pay structure, and growth prospects, with footnote-style source citations. Use whenever the user pastes a job link or JD and wants a quick read on it — e.g. 'what's this role like', 'is this worth applying to', or just a bare URL with no other comment when context makes clear they want it summarized. Distinct from the interview-prep skill: this is a fast, disposable chat-only lookup, not folder/file setup — if the user wants it filed under interview_prep/, that's the interview-prep skill instead, not this one."
+description: "Research a job posting the user just pasted (URL or raw JD text) and output a position_intro.md-style summary directly in the chat reply — never write it to a file. Covers JD summary (role + core responsibilities, work-mix table) plus a synthesis of what Taiwan forums (Dcard/PTT/104/518/Mobile01) say about WLB, pay structure, and growth prospects, with footnote-style source citations. Use whenever the user pastes a job link or JD and wants a quick read on it — e.g. 'what's this role like', 'is this worth applying to', or just a bare URL with no other comment when context makes clear they want it summarized. Distinct from the interview-prep skill: this is a fast, disposable chat-only lookup, not folder/file setup — if the user wants it filed under interview-prep/, that's the interview-prep skill instead, not this one."
 ---
 
 # Position Intro — Chat-Only Job Posting Summary
 
-Produces the same two-section research the `interview-prep` skill writes into `<Company>/<Position>/position_intro.md`, but outputs it **directly as the chat reply** — never write it to a file, never create folders. This is for a fast read on a posting the user just pasted, not for filing into `interview_prep/`. If the user separately asks to set up an interview prep folder for this role, that's the `interview-prep` skill, not this one.
+Produces the same two-section research the `interview-prep` skill writes into `<Company>/<Position>/position_intro.md`, but outputs it **directly as the chat reply** — never write it to a file, never create folders. This is for a fast read on a posting the user just pasted, not for filing into `interview-prep/`. If the user separately asks to set up an interview prep folder for this role, that's the `interview-prep` skill, not this one.
 
 ## Steps
 
@@ -30,8 +30,8 @@ Produces the same two-section research the `interview-prep` skill writes into `<
 
 ## Remaining steps
 
-5. **Don't offer to save it as a follow-up unless asked.** If the user later wants this filed under `interview_prep/`, that's a separate request — point them to the `interview-prep` skill rather than writing the file yourself here.
+5. **Don't offer to save it as a follow-up unless asked.** If the user later wants this filed under `interview-prep/`, that's a separate request — point them to the `interview-prep` skill rather than writing the file yourself here.
 
 ## What this skill does NOT do
 
-Never write files, never create folders, never touch `interview_prep/`. Output is chat text only, formatted in GitHub-flavored markdown so it renders inline. If the user wants persistent files (company_brief.md, position_intro.md, 模擬面試_QA.md, 基本知識.md filed under a company/position folder), that's the `interview-prep` skill.
+Never write files, never create folders, never touch `interview-prep/`. Output is chat text only, formatted in GitHub-flavored markdown so it renders inline. If the user wants persistent files (company_brief.md, position_intro.md, 模擬面試_QA.md, 基本知識.md filed under a company/position folder), that's the `interview-prep` skill.
