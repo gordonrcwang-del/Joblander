@@ -38,6 +38,12 @@ from email.mime.text import MIMEText
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.dirname(BASE_DIR)  # job-search/ — the user-facing files live one level up from this script
+
+# Every writer of ledger.json shares one lock (automation/_internal/runlock.py).
+# Before it existed the two schedules were merely staggered 20 minutes apart and
+# hoped not to collide; the dashboard's manual buttons made that hope untenable.
+sys.path.insert(0, os.path.join(os.path.dirname(OUTPUT_DIR), "_internal"))
+from runlock import ledger_lock, LockBusy  # noqa: E402
 SOURCES_PATH = os.path.join(BASE_DIR, "sources.json")
 
 
@@ -1333,7 +1339,9 @@ def cmd_queue():
             "locations": job["locations"], "selected_date": job["selected_date"],
         })
     for company_jobs in grouped.values():
-        company_jobs.sort(key=lambda j: j["selected_date"])
+        # or "" — 2026-08 之前用 mark 勾的舊紀錄沒有 selected_date,
+        # None 之間也不能比大小,排序會整個爆掉。
+        company_jobs.sort(key=lambda j: j["selected_date"] or "")
     print(json.dumps(grouped, ensure_ascii=False, indent=2))
 
 
@@ -1355,14 +1363,28 @@ def cmd_mark():
         if i + 1 < len(sys.argv):
             note = sys.argv[i + 1]
 
+    # 讀到寫之間若有掃描插進來,它的 save_ledger 會把這次的變更整份蓋掉。
+    # timeout=10:一般情況下沒人跟你搶,拿鎖是瞬間的事。
+    try:
+        lock = ledger_lock("mark %s" % key, timeout=10)
+        lock.__enter__()
+    except LockBusy as e:
+        sys.exit("%s —— 稍後再試" % e)
+
     ledger = load_ledger()
     job = ledger["jobs"].get(key)
     if not job:
+        lock.__exit__()
         print("no such job in ledger: %s" % key)
         sys.exit(1)
 
     job["state"] = state
     job["state_changed"] = TODAY
+    if state == "selected":
+        # ingest_today_jobs 走 today-jobs.md 的核取記號時會蓋這個日期,mark 原本
+        # 不會 —— 於是同一家公司裡混著兩種來源的勾選就會讓 cmd_queue 的排序拿
+        # None 跟字串比而爆掉。dashboard 全部走 mark,不補這行等於一定踩到。
+        job["selected_date"] = TODAY
     if state == "applied":
         job["applied_date"] = TODAY
         job["attempts"].append({"date": TODAY, "result": "applied", "note": note})
@@ -1378,6 +1400,7 @@ def cmd_mark():
     render(ledger, company_stats=None)
     if state == "applied":
         render_applied(ledger)
+    lock.__exit__()
     print("已更新 %s → %s" % (key, state))
 
 
@@ -1404,9 +1427,16 @@ def cmd_progress():
         if i + 1 < len(sys.argv):
             note = sys.argv[i + 1]
 
+    try:
+        lock = ledger_lock("progress %s" % key, timeout=10)
+        lock.__enter__()
+    except LockBusy as e:
+        sys.exit("%s —— 稍後再試" % e)
+
     ledger = load_ledger()
     job = ledger["jobs"].get(key)
     if not job:
+        lock.__exit__()
         print("no such job in ledger: %s" % key)
         sys.exit(1)
     if job["state"] != "applied":
@@ -1419,6 +1449,7 @@ def cmd_progress():
 
     save_ledger(ledger)
     render_applied(ledger)
+    lock.__exit__()
     print("已更新 %s 進度 → %s" % (key, status))
 
 
@@ -1457,7 +1488,13 @@ def main():
         sys.exit(1)
     cmd = sys.argv[1]
     if cmd == "discover":
-        run_with_heartbeat(cmd_discover)
+        # timeout=0: a discover run takes minutes, so queueing behind another
+        # scan would look like a hang. Refuse and say who holds the lock.
+        try:
+            with ledger_lock("職缺掃描"):
+                run_with_heartbeat(cmd_discover)
+        except LockBusy as e:
+            sys.exit(str(e))
     elif cmd == "backfill":
         cmd_backfill()
     elif cmd == "render":

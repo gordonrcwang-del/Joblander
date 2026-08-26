@@ -29,6 +29,12 @@ import time
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 SCAN_SCRIPT = os.path.join(BASE_DIR, "scan-gmail-interviews.sh")
+
+# The interview scan writes ledger progress and 面試行程.md; the job scan writes
+# the same ledger. One shared lock, so the dashboard's manual buttons and the two
+# schedules can never overlap — staggering them 20 minutes apart was a guess.
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "automation", "_internal"))
+from runlock import ledger_lock, LockBusy  # noqa: E402
 EMAIL_SCRIPT = os.path.join(BASE_DIR, "send_email_notification.py")
 
 TIMEOUT_SECONDS = 20 * 60  # a claude -p agent run; well past the ~2-4 min it needs
@@ -104,12 +110,20 @@ def run_once(run_ts):
     one (a run at 08:33 mailed a subject reading 14:05), which made subjects
     useless for ordering mail or matching it to a launchd.log block."""
     env = dict(os.environ, INTERVIEW_SCAN_RUN_TS=run_ts)
+    # The lock is taken per attempt, not around the whole retry loop: the gap
+    # between attempts is minutes long, and holding the ledger hostage through
+    # a sleep would block the job scan for no reason. A busy lock is just a
+    # failed attempt — the existing retry logic already handles "try later".
     try:
-        proc = subprocess.run(
-            ["/bin/bash", SCAN_SCRIPT],
-            cwd=PROJECT_ROOT, env=env,
-            capture_output=True, text=True,
-            timeout=TIMEOUT_SECONDS)
+        with ledger_lock("面試信掃描"):
+            proc = subprocess.run(
+                ["/bin/bash", SCAN_SCRIPT],
+                cwd=PROJECT_ROOT, env=env,
+                capture_output=True, text=True,
+                timeout=TIMEOUT_SECONDS)
+    except LockBusy as e:
+        emit(str(e))
+        return 125, str(e)
     except subprocess.TimeoutExpired:
         emit("TIMEOUT after %ds" % TIMEOUT_SECONDS)
         return 124, "(timed out after %d minutes, no output captured)" % (TIMEOUT_SECONDS // 60)
