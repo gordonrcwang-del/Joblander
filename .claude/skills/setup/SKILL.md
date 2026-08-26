@@ -1,6 +1,6 @@
 ---
 name: setup
-description: "Walk a brand-new user through installing Joblander end to end — dependency check, config.json, Gmail App Password into the macOS Keychain, Gmail/Calendar connectors, résumé-driven generation of applicant-profile.json and job-criteria.md, the ASML search token, a first scan_jobs.py discover run, launchd scheduling, and a final leak check on git status. Use whenever someone is setting this repo up for the first time or repairing a half-finished install, e.g. '幫我裝 Joblander', 'set this up for me', '我剛 clone 下來要怎麼開始', 'joblander 裝到一半卡住了', 'set up the job scanner'. Also use when a user reports that a piece of the system was never configured — no notification mail arriving, Gmail tools unavailable, today-jobs.md never appearing — since the fix is to re-run the matching phase's gate."
+description: "Walk a brand-new user through installing Joblander end to end — dependency check, config.json, Gmail App Password into the macOS Keychain, Gmail/Calendar connectors, résumé-driven generation of applicant-profile.json and job-criteria.md, the ASML search token, a first scan_jobs.py discover run, launchd scheduling, the always-on dashboard and its Dock launcher, and a final leak check on git status. Use whenever someone is setting this repo up for the first time or repairing a half-finished install, e.g. '幫我裝 Joblander', 'set this up for me', '我剛 clone 下來要怎麼開始', 'joblander 裝到一半卡住了', 'set up the job scanner'. Also use when a user reports that a piece of the system was never configured — no notification mail arriving, Gmail tools unavailable, today-jobs.md never appearing — since the fix is to re-run the matching phase's gate."
 ---
 
 # Joblander Setup
@@ -130,7 +130,19 @@ Report what you're skipping before you start. Never re-run a step's gate against
 
 13. **生 `BACKGROUND.md` 骨架。** `cp background/BACKGROUND.example.md background/BACKGROUND.md`,把履歷裡的公司、職稱、年份、專案標題填成空的段落標題。**STAR 內容交棒給使用者,但不擋安裝完成** —— 那份只有 `interview-prep` 會讀,真的排到面試前用不到。列進最後回報的待辦。
 
-14. **收尾檢查。**
+14. **問要不要裝看板。** 說明一句就好:「四個資料來源在同一頁,只有你自己連得到,點 Dock 圖示就開」。答「不用」就跳過,不影響其他東西。
+
+    ```bash
+    python3 automation/dashboard/_internal/install_launchd.py
+    ```
+
+    **這支跟步驟 12 的兩個排程不同 —— 它是 `KeepAlive` 常駐,不是定時觸發。** 登入就起來、掉了自己重啟,label 是 `<prefix>.dashboard`,跟另外兩個同一個命名空間。它會順手在 `~/Applications` 做啟動器,**拖進 Dock 這一步只有使用者自己能做,要明講**。
+
+    裝完當場驗:`curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/` 要是 200。
+
+    三件事一定要交代,不然使用者會以為壞了:登入**不會**自動跳分頁(起的是伺服器不是瀏覽器)、通行碼每次啟動都換所以**不能存書籤**、頁面說沒授權就是伺服器重啟過、**點啟動器重開就好**。
+
+15. **收尾檢查。**
 
     ```bash
     python3 automation/job-search/_internal/scan_jobs.py discover
@@ -141,7 +153,7 @@ Report what you're skipping before you start. Never re-run a step's gate against
 
     **`git status` 是硬閘門。** 看到任何個人檔案就停下來修 `.gitignore`,不要說「應該沒問題」。`.gitignore` 只擋還沒被追蹤的檔,已追蹤的改了照樣進 commit。
 
-15. **回報。** 哪幾步做了、哪幾步跳過(以及為什麼)、`BACKGROUND.md` 還欠什麼、下一步做什麼。
+16. **回報。** 哪幾步做了、哪幾步跳過(以及為什麼)、`BACKGROUND.md` 還欠什麼、下一步做什麼。看板裝了就把「把啟動器拖進 Dock」列進待辦 —— 那一步只有使用者能做。
 
 ---
 

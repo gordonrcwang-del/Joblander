@@ -228,6 +228,37 @@ log 在 `automation/*/\_internal/logs/launchd.log`。
 
 ---
 
+## 8. 看板（選配，但裝了才會天天用）
+
+四個資料來源（今日職缺、面試行程、已投遞、待辦）在同一頁,只綁 `127.0.0.1`。先跑一次看看:
+
+```bash
+python3 automation/dashboard/_internal/server.py
+```
+
+會自己開瀏覽器。網址帶一組隨機通行碼,`Ctrl-C` 結束。
+
+要它一直在,不用每次手動開:
+
+```bash
+python3 automation/dashboard/_internal/install_launchd.py --print   # 先看要裝什麼
+python3 automation/dashboard/_internal/install_launchd.py           # 確認後再裝
+```
+
+這支跟步驟 7 的兩個 job 不一樣 —— 它不是排程,是 `KeepAlive` 常駐:登入就起來,掉了自己重啟。plist 用的是同一個 `launchd_label_prefix`,label 是 `<prefix>.dashboard`。
+
+安裝時會順手在 `~/Applications` 做一個啟動器(Finder 裡叫「求職看板」)。**把它拖到 Dock** —— 之後開看板就是點一下。
+
+### 三件會讓人以為壞掉的事
+
+1. **登入不會自動跳分頁。** launchd 起的是伺服器,不是瀏覽器。要看就點啟動器。
+2. **通行碼每次啟動都會換,所以不能存書籤。** 隔天那組就失效了。啟動器每次現讀 `~/.joblander/dashboard-token`,所以它不受影響。
+3. **頁面突然說沒授權** = 伺服器重啟過(自動重啟也算)。點啟動器重開,不用做別的。
+
+**看板自己不寫任何檔案。** 網頁上的每個動作都是去呼叫既有的 CLI,所以你手改過的 markdown 不會被它蓋掉。
+
+---
+
 ## 驗證清單
 
 ```bash
@@ -235,6 +266,7 @@ python3 automation/job-search/_internal/scan_jobs.py discover   # 應該產出 t
 security find-generic-password -s "job-scan-smtp-app-password" -w  # 應該印出密碼
 claude -p "列出你能用的 Gmail 工具" --allowedTools "ToolSearch mcp__claude_ai_Gmail__search_threads"  # 應該列得出來
 git status                                                       # 不該看到任何個人檔案
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/  # 裝了看板才要看,應該是 200
 ```
 
 最後那條最重要。**第一次 commit 前先看一遍 `git status`** —— `.gitignore` 只擋沒被追蹤的檔,已經被追蹤的檔改了照樣會進 commit。
