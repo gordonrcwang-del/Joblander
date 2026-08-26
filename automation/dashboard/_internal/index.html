@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Joblander</title>
+<style>
+  :root{
+    --bg:#f6f6f4; --panel:#fff; --ink:#1c1c1a; --dim:#6d6c66; --line:#e2e1dc; --line2:#f0efec;
+    --accent:#2f5d50; --accent-soft:#e8f0ec; --attn:#a8590f; --attn-soft:#fdf0e0;
+    --ok:#2f6d3f; --bad:#9b2c2c; --busy:#3a5a8c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 -apple-system,"Helvetica Neue","PingFang TC","Noto Sans TC",sans-serif}
+  .muted{color:var(--dim)} .tiny{font-size:12px}
+  .mono{font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;
+    padding:9px 14px;font:inherit;font-size:14px;cursor:pointer}
+  .btn:hover:not(:disabled){border-color:#c3c2bb}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.ghost{border:none;background:none;padding:6px 2px;font-size:12px;color:var(--dim);
+    cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+  .hero{padding:36px 24px 28px;background:#fff;border-bottom:1px solid var(--line)}
+  .hero.tone-attn{background:var(--attn-soft);border-color:#f0d3a8}
+  .hero .lab{font-size:34px;font-weight:700;display:block;margin:4px 0 6px}
+  .dot{display:inline-block;width:14px;height:14px;border-radius:50%;background:#b9b8b2;
+    margin-right:12px;vertical-align:middle}
+  .tone-busy .dot{background:var(--busy)} .tone-attn .dot{background:var(--attn)}
+  .tone-attn .lab{color:var(--attn)}
+  .acts{display:flex;gap:10px;margin-top:26px;align-items:center}
+
+  .tabs{display:flex;gap:2px;padding:0 24px;background:#fff;border-bottom:1px solid var(--line)}
+  .tab{border:none;background:none;padding:13px 16px;font:inherit;font-size:14px;cursor:pointer;
+    color:var(--dim);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+  .wrap{padding:20px 24px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+
+  .filters{display:flex;gap:8px;align-items:center;padding:12px 14px;
+    border-bottom:1px solid var(--line);background:#fbfbfa;flex-wrap:wrap}
+  select{font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line);
+    border-radius:7px;background:#fff;color:var(--ink)}
+
+  .bulk{display:flex;gap:10px;align-items:center;padding:10px 14px;background:var(--accent-soft);
+    border-bottom:1px solid #cfdfd8;color:var(--accent);font-size:13px;flex-wrap:wrap}
+  .bulk .btn{padding:6px 12px;font-size:13px}
+
+  .scroll{max-height:min(58vh,560px);overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{position:sticky;top:0;background:#fbfbfa;z-index:2;text-align:left;font-size:11.5px;
+    color:var(--dim);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--ink)}
+  td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:#faf9f7}
+  tr.sel td{background:var(--accent-soft)}
+  tr.sel:hover td{background:#dfebe5}
+  tr.off td{opacity:.5}
+  /* 表格用 auto layout,不設 nowrap 的話短欄位會被撐開、長欄位反而被擠成兩三行。
+     日期、時間、公司、形式一律不換行,把伸縮空間全留給職稱/職位那一欄。 */
+  td.t{width:100%} td.co,td.mono{white-space:nowrap}
+  td.c{width:38px;padding-right:0}
+  td.t a{color:inherit;text-decoration:none}
+  td.t a:hover{text-decoration:underline}
+  input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0}
+
+  .pill{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:99px;
+    white-space:nowrap;background:#f0efeb;color:var(--dim)}
+  .b-selected{background:var(--accent);color:#fff}
+  .b-new{background:#e6eefb;color:#2b4f86}
+  .b-seen{background:#f0efeb;color:#77766f}
+  .s-pending{background:#fdf1cf;color:#7a5a00}
+  .s-interview{background:#dcf0e1;color:#1f6b34}
+  .s-offer{background:#0f4a22;color:#fff;font-weight:600}
+  .s-rejected{background:#fbe0e0;color:#9b2c2c}
+  .s-closed{background:#ecebe7;color:#77766f}
+  .d-over{background:#fbe0e0;color:#9b2c2c;font-weight:600}
+  .d-today{background:#fdeacd;color:#a8590f;font-weight:600}
+  .d-later{background:#f0efeb;color:#77766f}
+  .k-deliver{background:#e6eefb;color:#2b4f86}
+  .k-reply{background:#f0efeb;color:#77766f}
+  .pill.urgent{background:#c0392b;color:#fff;font-weight:700}
+  .donehead{display:flex;justify-content:space-between;align-items:center;width:100%;
+    background:#fbfbfa;border:none;border-top:1px solid var(--line);padding:11px 14px;
+    font:inherit;font-size:13px;color:var(--dim);cursor:pointer;text-align:left}
+  .donehead:hover{color:var(--ink)}
+  .donebox td{color:var(--dim)} .donebox .t{text-decoration:line-through}
+
+  .empty{padding:34px;text-align:center;color:var(--dim);font-size:13px}
+  .err{margin:20px 24px;padding:14px 16px;border:1px solid #f0c9c9;background:#fdf0f0;
+    color:var(--bad);border-radius:10px;font-size:14px;white-space:pre-wrap}
+  .note{margin:20px 24px -6px;padding:12px 16px;border:1px solid #cfdfd8;background:var(--accent-soft);
+    color:var(--accent);border-radius:10px;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+
+/* --------------------------------------------------------------------------
+   Token
+   server 啟動時把它放進網址(?t=…)。頁面拿到後存進 sessionStorage,再把網址洗掉,
+   免得它留在瀏覽器歷史、書籤、或使用者複製貼上的連結裡。
+   sessionStorage 而非 localStorage:每次啟動 server 都會換一組新 token。
+   -------------------------------------------------------------------------- */
+const KEY = "joblander-token";
+(function bootstrapToken(){
+  const u = new URL(location);
+  const t = u.searchParams.get("t");
+  if (t) {
+    sessionStorage.setItem(KEY, t);
+    u.searchParams.delete("t");
+    history.replaceState(null, "", u.pathname + u.search + u.hash);
+  }
+})();
+const token = () => sessionStorage.getItem(KEY) || "";
+
+async function api(path, body){
+  const opt = {headers:{Authorization: "Bearer " + token()}};
+  if (body !== undefined) {
+    opt.method = "POST";
+    opt.headers["Content-Type"] = "application/json";
+    opt.body = JSON.stringify(body);
+  }
+  const res = await fetch(path, opt);
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+  return data;
+}
+
+/* -------------------------------------------------------------------------- */
+const BUCKET = {selected:"待投遞", new:"新職缺", seen:"看過"};
+const STATUS_ORDER = ["pending","interview","offer","rejected","closed"];
+const STATUS_LABEL = {pending:"待回覆", interview:"面試中", offer:"Offer",
+                      rejected:"被拒絕", closed:"已結束"};
+const KIND_LABEL = {deliver:"待交付", reply:"待回信"};
+const TABS = [
+  {k:"jobs", label:"今日職缺"},
+  {k:"itv",  label:"面試行程"},
+  {k:"app",  label:"已投遞"},
+  {k:"todo", label:"待辦"},
+];
+
+const state = {
+  tab: "jobs",
+  jobs: null, interviews: null, applied: null, todos: null, today: "",
+  generated: "", error: "", notice: "", busy: false,
+  status: {key:"idle", label:"閒置", tone:"idle", sub:"沒有進行中的工作"},
+  lock: null, version: "",
+  sel: new Set(), tsel: new Set(), doneOpen: false,
+  sort: {jobs:{by:"posted",dir:-1}, itv:{by:"date",dir:1}, app:{by:"date",dir:-1},
+         todo:{by:"due",dir:1}},
+  filter: {jobs:{company:"",location:""}, itv:{company:"",status:""}, app:{company:"",status:""},
+           todo:{kind:""}},
+};
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uniq = (rows, f) => [...new Set((rows||[]).map(f))].filter(Boolean).sort();
+// list 是 [value, label] 或裸字串(值即標籤)。
+const opts = (cur, list, ph) => `<option value="">${ph}</option>` +
+  list.map(v => {
+    const [val, label] = Array.isArray(v) ? v : [v, v];
+    return `<option value="${esc(val)}" ${cur===val?"selected":""}>${esc(label)}</option>`;
+  }).join("");
+
+function sorted(tab, rows, rank){
+  const {by, dir} = state.sort[tab];
+  const key = rank || (r => r[by]);
+  return [...rows].sort((a,b) => {
+    const x = key(a), y = key(b);
+    return (x > y ? 1 : x < y ? -1 : 0) * dir;
+  });
+}
+function th(tab, key, label, cls){
+  const s = state.sort[tab];
+  const mark = s.by === key ? (s.dir > 0 ? " ▲" : " ▼") : "";
+  return `<th class="sortable ${cls||""}" data-sort="${tab}.${key}">${label}${mark}</th>`;
+}
+function link(row){
+  return row.url ? `<a href="${esc(row.url)}" target="_blank" rel="noopener">${esc(row.title)}</a>`
+                 : esc(row.title);
+}
+
+/* ---- 今日職缺 ------------------------------------------------------------ */
+function visibleJobs(){
+  const f = state.filter.jobs;
+  const rows = state.jobs.filter(j =>
+    (!f.company || j.company === f.company) && (!f.location || j.location === f.location));
+  // bucket 依「待投遞 → 新職缺 → 看過」而非字母序,那是它在畫面上的意義順序。
+  const order = ["selected","new","seen"];
+  return sorted("jobs", rows,
+    state.sort.jobs.by === "bucket" ? (j => order.indexOf(j.bucket)) : null);
+}
+
+function jobsPanel(){
+  if (state.jobs === null) return `<div class="empty">載入中…</div>`;
+  const rows = visibleJobs();
+  const allOn = rows.length > 0 && rows.every(j => state.sel.has(j.key));
+  const n = state.sel.size;
+  const companies = new Set(state.jobs.filter(j => state.sel.has(j.key)).map(j => j.company)).size;
+  const bulk = n ? `<div class="bulk">
+      <b>已選 ${n} 筆 · ${companies} 家</b>
+      <button class="btn primary" data-act="apply-selected" ${state.busy?"disabled":""}>投這 ${n} 筆</button>
+      <button class="btn" data-act="skip-selected" ${state.busy?"disabled":""}>略過這 ${n} 筆</button>
+      <button class="btn ghost" data-act="clear-sel" style="color:var(--accent)">取消選取</button>
+    </div>` : "";
+  const body = rows.length ? rows.map(j => `<tr class="${state.sel.has(j.key)?"sel":""}">
+      <td class="c"><input type="checkbox" data-row="${esc(j.key)}" ${state.sel.has(j.key)?"checked":""}></td>
+      <td><span class="pill b-${j.bucket}">${BUCKET[j.bucket]}</span></td>
+      <td class="t">${link(j)}${j.new_grad?" 🎓":""}
+        <div class="tiny muted mono">${esc(j.key)}</div></td>
+      <td class="co">${esc(j.company)}</td>
+      <td class="co">${esc(j.location)}</td>
+      <td class="mono">${esc(j.posted)}</td>
+    </tr>`).join("")
+    : `<tr><td colspan="6" class="empty">${state.jobs.length ? "沒有符合篩選條件的職缺" : "今天沒有符合的職缺"}</td></tr>`;
+  return `
+    <div class="filters">
+      <select data-filter="jobs.company">${opts(state.filter.jobs.company, uniq(state.jobs,j=>j.company), "公司：全部")}</select>
+      <select data-filter="jobs.location">${opts(state.filter.jobs.location, uniq(state.jobs,j=>j.location), "地點：全部")}</select>
+      <span class="tiny muted">顯示 ${rows.length} / ${state.jobs.length} 筆</span>
+    </div>
+    ${bulk}
+    <div class="scroll"><table>
+      <thead><tr>
+        <th class="c"><input type="checkbox" data-act="all" ${allOn?"checked":""}></th>
+        ${th("jobs","bucket","分類")}${th("jobs","title","職稱")}${th("jobs","company","公司")}
+        ${th("jobs","location","地點")}${th("jobs","posted","上架日")}
+      </tr></thead><tbody>${body}</tbody>
+    </table></div>`;
+}
+
+/* ---- 面試行程(唯讀) ----------------------------------------------------- */
+function itvPanel(){
+  if (state.interviews === null) return `<div class="empty">載入中…</div>`;
+  const f = state.filter.itv;
+  const rows = sorted("itv", state.interviews.filter(r =>
+    (!f.company || r.company === f.company) && (!f.status || r.status === f.status)));
+  const body = rows.length ? rows.map(r => `<tr class="${r.cancelled?"off":""}">
+      <td class="mono">${esc(r.date_label)}</td>
+      <td class="mono">${esc(r.time)}</td>
+      <td class="co">${esc(r.company)}</td>
+      <td class="t">${esc(r.position)}</td>
+      <td class="co">${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.form)}</a>` : esc(r.form)}</td>
+      <td class="co"><span class="pill s-${esc(r.status_cls || "closed")}">${esc(r.status || "")}</span></td>
+    </tr>`).join("")
+    : `<tr><td colspan="6" class="empty">沒有面試行程</td></tr>`;
+  return `
+    <div class="filters">
+      <select data-filter="itv.company">${opts(f.company, uniq(state.interviews,r=>r.company), "公司：全部")}</select>
+      <select data-filter="itv.status">${opts(f.status, uniq(state.interviews,r=>r.status), "狀態：全部")}</select>
+      <span class="tiny muted">${rows.length} 場 · 唯讀,由面試信掃描維護</span>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr>
+        ${th("itv","date","日期")}${th("itv","time","時間")}${th("itv","company","公司")}
+        ${th("itv","position","職位")}${th("itv","form","形式")}${th("itv","status","狀態")}
+      </tr></thead><tbody>${body}</tbody>
+    </table></div>`;
+}
+
+/* ---- 已投遞(唯讀) ------------------------------------------------------- */
+function appPanel(){
+  if (state.applied === null) return `<div class="empty">載入中…</div>`;
+  const d = state.applied, f = state.filter.app;
+  const rows = sorted("app", d.applied.filter(r =>
+    (!f.company || r.company === f.company) && (!f.status || r.tone === f.status)));
+  const body = rows.length ? rows.map(r => `<tr>
+      <td class="mono">${esc(r.date)}</td>
+      <td class="co">${esc(r.company)}</td>
+      <td class="t">${link(r)}</td>
+      <td><span class="pill s-${r.tone}">${esc(r.label)}</span></td>
+    </tr>`).join("")
+    : `<tr><td colspan="4" class="empty">沒有符合的紀錄</td></tr>`;
+  const counts = STATUS_ORDER
+    .map(k => [k, Object.entries(d.counts).filter(([s]) => s === k || (k==="closed" && s==="withdrawn"))
+                     .reduce((a,[,v]) => a+v, 0)])
+    .filter(([,v]) => v);
+  return `
+    <div class="filters">
+      <select data-filter="app.company">${opts(f.company, uniq(d.applied,r=>r.company), "公司：全部")}</select>
+      <select data-filter="app.status">${opts(f.status,
+        counts.map(([k]) => [k, STATUS_LABEL[k]]), "狀態：全部")}</select>
+      <span class="tiny muted">顯示 ${rows.length} / 共 ${d.total} 筆${
+        d.total > d.limit ? `（最近 ${d.limit} 筆）` : ""}</span>
+      <span style="flex:1"></span>
+      ${counts.map(([k,v]) => `<span class="pill s-${k}">${STATUS_LABEL[k]} ${v}</span>`).join(" ")}
+    </div>
+    <div class="scroll"><table>
+      <thead><tr>
+        ${th("app","date","申請日")}${th("app","company","公司")}
+        ${th("app","title","職稱")}${th("app","tone","狀態")}
+      </tr></thead><tbody>${body}</tbody>
+    </table></div>`;
+}
+
+/* ---- 待辦 ---------------------------------------------------------------- */
+const dueCls = d => !d ? "d-later" : d < state.today ? "d-over"
+                                   : d === state.today ? "d-today" : "d-later";
+const dueTxt = d => !d ? "—" : d < state.today ? d + "（逾期）"
+                                : d === state.today ? d + "（今天）" : d;
+const urgentTodos = () => (state.todos || [])
+  .filter(t => !t.done && t.due && t.due <= state.today).length;
+
+function todoPanel(){
+  if (state.todos === null) return `<div class="empty">載入中…</div>`;
+  const f = state.filter.todo;
+  const pass = t => !f.kind || t.kind === f.kind;
+  const open = sorted("todo", state.todos.filter(t => !t.done && pass(t)));
+  const done = state.todos.filter(t => t.done && pass(t))
+                          .sort((a,b) => (b.completed||"").localeCompare(a.completed||""));
+  const allOn = open.length > 0 && open.every(t => state.tsel.has(t.id));
+  const n = state.tsel.size, u = urgentTodos();
+  const bulk = n ? `<div class="bulk">
+      <b>已選 ${n} 筆</b>
+      <button class="btn primary" data-act="todo-done" ${state.busy?"disabled":""}>標為完成 ${n} 筆</button>
+      <button class="btn ghost" data-act="todo-clear" style="color:var(--accent)">取消選取</button>
+    </div>` : "";
+  const row = t => `<tr class="${state.tsel.has(t.id)?"sel":""}">
+      <td class="c"><input type="checkbox" data-todo="${esc(t.id)}" ${t.done||state.tsel.has(t.id)?"checked":""}></td>
+      <td><span class="pill k-${t.kind}">${KIND_LABEL[t.kind]||t.kind}</span></td>
+      <td class="t">${esc(t.action)}</td>
+      <td class="co mono tiny muted">${esc(t.contact)}</td>
+      <td>${t.done ? `<span class="pill s-closed">${esc(t.completed || "")}</span>`
+                   : `<span class="pill ${dueCls(t.due)}">${esc(dueTxt(t.due))}</span>`}</td>
+    </tr>`;
+  return `
+    <div class="filters">
+      <select data-filter="todo.kind">${opts(f.kind,
+        Object.entries(KIND_LABEL).map(([k,v]) => [k,v]), "類型：全部")}</select>
+      <span class="tiny muted">未完成 ${open.length} 筆 · 走 todo.py 寫回 TODO.md</span>
+      <span style="flex:1"></span>
+      ${u ? `<span class="pill urgent">今天或已逾期 ${u}</span>` : ""}
+    </div>
+    ${bulk}
+    <div class="scroll"><table>
+      <thead><tr>
+        <th class="c"><input type="checkbox" data-act="todo-all" ${allOn?"checked":""}></th>
+        ${th("todo","kind","類型")}${th("todo","action","事項")}
+        ${th("todo","contact","對象")}${th("todo","due","期限")}
+      </tr></thead>
+      <tbody>${open.map(row).join("") ||
+        `<tr><td colspan="5" class="empty">沒有未完成的待辦 🎉</td></tr>`}</tbody>
+    </table></div>
+    <button class="donehead" data-act="done-toggle">
+      <span>${state.doneOpen?"▾":"▸"} ✅ 已完成 · ${done.length} 筆</span>
+      <span>${state.doneOpen?"收合":"展開"}</span>
+    </button>
+    ${state.doneOpen ? `<div class="scroll donebox"><table><tbody>${
+      done.map(row).join("") || `<tr><td class="empty">還沒有完成的項目</td></tr>`}</tbody></table></div>` : ""}`;
+}
+
+/* -------------------------------------------------------------------------- */
+// 讀不到資料時只顯示錯誤,不要在底下再擺一張空表格 —— 那會讀成「今天真的沒職缺」,
+// 而真正的原因是 token 過期。
+const fatal = () => Boolean(state.error) && (state.jobs || []).length === 0;
+
+// 鎖被誰拿著就不給按 —— 兩個掃描同時寫紀錄檔會互相覆蓋。按鈕先擋一層,server
+// 端還會再擋一次(按鈕的狀態最多晚一個輪詢週期)。
+// 投履歷一次只跑一家:換公司要換瀏覽器 session、要重新登入,不該偷偷連著跑。
+function selectedByCompany(){
+  const map = new Map();
+  (state.jobs || []).filter(j => state.sel.has(j.key)).forEach(j => {
+    map.set(j.company, (map.get(j.company) || 0) + 1);
+  });
+  return map;
+}
+function applyLabel(){
+  const n = state.sel.size;
+  return n ? `投履歷（${n} 筆）` : "投履歷（沒有勾選）";
+}
+function applyBlocked(){
+  if (!state.sel.size) return "先在今日職缺勾幾筆";
+  if (state.status.key !== "idle") return "有工作在跑:" + state.status.label;
+  if (selectedByCompany().size > 1)
+    return "勾到了 " + selectedByCompany().size + " 家 —— 一次只投一家,換公司要重新登入";
+  return "";
+}
+function scanBlocked(){
+  if (state.lock) return "掃描中:" + state.lock;
+  if (state.status.key === "scanning") return state.status.label;
+  return "";
+}
+
+function panelFor(tab){
+  if (tab.k === "jobs") return jobsPanel();
+  if (tab.k === "itv")  return itvPanel();
+  if (tab.k === "app")  return appPanel();
+  if (tab.k === "todo") return todoPanel();
+  return `<div class="empty">這個分頁還沒實作 —— 見 ticket ${tab.todo}。</div>`;
+}
+
+function tabCount(t){
+  if (t.k === "jobs" && state.jobs) return state.jobs.length;
+  if (t.k === "itv" && state.interviews) return state.interviews.length;
+  if (t.k === "app" && state.applied) return state.applied.total;
+  if (t.k === "todo" && state.todos) return state.todos.filter(x => !x.done).length;
+  return null;
+}
+
+function render(){
+  const tab = TABS.find(t => t.k === state.tab);
+  document.getElementById("app").innerHTML = `
+    <div class="hero tone-${state.status.tone}">
+      <div class="tiny muted">Joblander${state.generated ? " · " + esc(state.generated) : ""}</div>
+      <span class="lab"><span class="dot"></span>${esc(state.status.label)}</span>
+      <div class="muted">${esc(state.status.sub || "")}</div>
+      <div class="acts">
+        ${state.status.key === "awaiting_next" ? `
+          <button class="btn primary" data-act="apply-next">下一個</button>
+          <button class="btn" data-act="apply-stop">停在這裡</button>`
+        : `<button class="btn primary" data-act="apply-start" ${applyBlocked()?"disabled":""}
+             title="${applyBlocked()?esc(applyBlocked()):"開始投已勾選的職缺"}">${applyLabel()}</button>`}
+        <button class="btn" data-act="scan-jobs" ${scanBlocked()?"disabled":""}
+          title="${scanBlocked()?esc(scanBlocked()):"立刻跑一次職缺掃描"}">掃職缺</button>
+        <button class="btn" data-act="scan-itv" ${scanBlocked()?"disabled":""}
+          title="${scanBlocked()?esc(scanBlocked()):"立刻跑一次面試信掃描"}">掃面試信</button>
+        <span style="flex:1"></span>
+        <button class="btn ghost" data-act="refresh" ${state.busy?"disabled":""}>↻ 刷新資料</button>
+      </div>
+      ${scanBlocked() ? `<div class="tiny muted" style="margin-top:10px">${esc(scanBlocked())}</div>` : ""}
+    </div>
+    <div class="tabs">${TABS.map(t => {
+      const n = tabCount(t);
+      // 待辦的總數天天都在那,急件數才是要人抬頭的東西。
+      const u = t.k === "todo" ? urgentTodos() : 0;
+      return `<button class="tab ${state.tab===t.k?"on":""}" data-tab="${t.k}">${t.label}${
+        n === null ? "" : ` <span class="pill ${u?"urgent":""}">${u || n}</span>`}</button>`;
+    }).join("")}</div>
+    ${state.error ? `<div class="err">${esc(state.error)}</div>` : ""}
+    ${state.notice ? `<div class="note">${esc(state.notice)}</div>` : ""}
+    ${fatal() ? "" : `<div class="wrap"><div class="panel">${panelFor(tab)}</div></div>`}`;
+}
+
+/* ---- 資料 ---------------------------------------------------------------- */
+function authMessage(e){
+  return e.message === "UNAUTHORIZED"
+    ? "token 無效或過期。回終端看 server 印出的網址重開一次(每次重啟 server 都會換一組)。"
+    : e.message;
+}
+
+async function load(){
+  try {
+    const [jobs, itv, app, todos] = await Promise.all([
+      api("/api/jobs"), api("/api/interviews"), api("/api/applied"), api("/api/todos")]);
+    applyJobs(jobs);
+    state.interviews = itv.interviews;
+    state.applied = app;
+    applyTodos(todos);
+    const missing = [
+      jobs.source_missing && "today-jobs.md",
+      itv.source_missing && "面試行程.md",
+      app.source_missing && "applied-jobs.md",
+    ].filter(Boolean);
+    state.error = missing.length ? "找不到:" + missing.join("、") : "";
+  } catch (e) {
+    state.jobs = state.jobs || [];
+    state.interviews = state.interviews || [];
+    state.applied = state.applied || {applied:[], total:0, counts:{}, limit:50};
+    state.todos = state.todos || [];
+    state.error = "讀不到資料:" + authMessage(e);
+  }
+  render();
+}
+
+function applyJobs(d){
+  state.jobs = d.jobs;
+  state.generated = d.generated || "";
+  // 勾選狀態的真相在 ledger 裡(state === "selected"),不在瀏覽器 —— 重新載入
+  // 或換一台裝置看到的都一樣,而且排程改過的東西這裡立刻反映得出來。
+  state.sel = new Set(d.jobs.filter(j => j.selected).map(j => j.key));
+}
+
+function applyTodos(d){
+  state.todos = d.items || [];
+  state.today = d.today || state.today;
+  // 勾選狀態的真相在 TODO.md 裡,不在瀏覽器 —— 跟職缺同一套。
+  state.tsel = new Set();
+}
+
+async function todoDone(){
+  const ids = [...state.tsel];
+  if (!ids.length) return;
+  state.busy = true; state.notice = `標記中… ${ids.length} 筆`; state.error = ""; render();
+  try {
+    const r = await api("/api/todos/done", {ids, done: true});
+    applyTodos(r.todos);
+    state.doneOpen = true;      // 東西真的搬過去了,讓人看見
+    state.notice = r.failed.length
+      ? `完成 ${r.changed.length} 筆,${r.failed.length} 筆失敗`
+      : `已標為完成 ${r.changed.length} 筆`;
+    state.error = r.failed.length ? r.failed.map(f => `${f.id}：${f.error}`).join("\n") : "";
+  } catch (e) {
+    state.error = "標記失敗:" + authMessage(e);
+  }
+  state.busy = false; render();
+}
+
+async function todoUndo(id){
+  state.busy = true; render();
+  try {
+    applyTodos((await api("/api/todos/done", {ids:[id], done:false})).todos);
+    state.notice = "已還原 1 筆";
+  } catch (e) { state.error = "還原失敗:" + authMessage(e); }
+  state.busy = false; render();
+}
+
+async function mark(stateName, verb){
+  const keys = [...state.sel];
+  if (!keys.length) return;
+  state.busy = true; state.notice = `${verb}中… ${keys.length} 筆`; state.error = ""; render();
+  try {
+    const r = await api("/api/jobs/mark", {keys, state: stateName});
+    applyJobs(r.jobs);
+    state.notice = r.failed.length
+      ? `${verb} ${r.marked.length} 筆,${r.failed.length} 筆失敗`
+      : `已${verb} ${r.marked.length} 筆`;
+    state.error = r.failed.length
+      ? r.failed.map(f => `${f.key}：${f.error}`).join("\n") : "";
+  } catch (e) {
+    state.error = `${verb}失敗:` + authMessage(e);
+  }
+  state.busy = false;
+  render();
+}
+
+async function applyStart(){
+  // 勾選的真相在 ledger,但 company_id 不在職缺清單裡 —— 用 key 的前綴取,
+  // 那正是 ledger 用來分組的欄位(amat-R… / asml-J… / kla-…)。
+  const keys = [...state.sel];
+  const cid = keys.length ? keys[0].split("-")[0] : "";
+  state.notice = ""; state.error = ""; render();
+  try {
+    await api("/api/apply/start", {company: cid});
+    state.notice = `已開始投遞（${cid}）—— 狀態欄會告訴你卡在哪`;
+  } catch (e) {
+    state.error = "投履歷沒有啟動:" + authMessage(e);
+  }
+  render();
+  poll();
+}
+
+async function applySignal(name, label){
+  try {
+    const r = await api("/api/apply/" + name, {});
+    state.status = r.status; state.lock = r.lock; state.version = r.version;
+    state.notice = label;
+  } catch (e) { state.error = label + "失敗:" + authMessage(e); }
+  render();
+  poll();
+}
+
+async function scan(path, label){
+  state.notice = ""; state.error = ""; render();
+  try {
+    const r = await api(path, {});
+    state.status = r.status; state.lock = r.lock; state.version = r.version;
+    state.notice = `${label}已開始 —— 跑完狀態欄會變,資料要按刷新才更新`;
+  } catch (e) {
+    state.error = `${label}沒有啟動:` + authMessage(e);
+  }
+  render();
+  poll();          // 立刻接上長輪詢,不必等前一輪的 25 秒逾時走完
+}
+
+/* ---- 狀態長輪詢 ----------------------------------------------------------
+   全頁唯一由 server 主動推的東西。用長輪詢而不是 SSE:EventSource 沒辦法帶
+   Authorization header,token 就得塞進網址,那是我們一開始特意避開的事。
+   -------------------------------------------------------------------------- */
+let polling = false;
+async function poll(){
+  if (polling) return;
+  polling = true;
+  try {
+    for (;;) {
+      let r;
+      try {
+        r = await api("/api/status/wait?since=" + encodeURIComponent(state.version));
+      } catch (e) {
+        // server 重啟或 token 過期 —— 等一下再試,不要把畫面洗成錯誤。
+        await new Promise(res => setTimeout(res, 3000));
+        continue;
+      }
+      if (r.version === state.version) continue;      // 逾時,沒變化
+      const wasScanning = state.status.key === "scanning";
+      const wasBusy = !["idle","done","fail"].includes(state.status.key);
+      state.status = r.status; state.lock = r.lock; state.version = r.version;
+      render();
+      // 掃描剛結束 —— 資料一定變了,這時候自己刷新不會打斷閱讀。
+      // 掃描或投遞剛結束 —— 資料一定變了,這時候自己刷新不會打斷閱讀。
+      if ((wasScanning || wasBusy) && ["idle","done","fail"].includes(r.status.key)) load();
+    }
+  } finally { polling = false; }
+}
+
+/* ---- 互動 ---------------------------------------------------------------- */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-tab],[data-sort],[data-act],[data-row],[data-todo]");
+  if (!el) return;
+  const act = el.dataset.act;
+  if (el.dataset.tab) state.tab = el.dataset.tab;
+  else if (el.dataset.sort) {
+    const [tab, by] = el.dataset.sort.split(".");
+    const s = state.sort[tab];
+    s.dir = s.by === by ? -s.dir : 1;
+    s.by = by;
+  }
+  else if (el.dataset.row) {
+    const k = el.dataset.row;
+    state.sel.has(k) ? state.sel.delete(k) : state.sel.add(k);
+  }
+  else if (act === "all") {
+    // 全選只作用在「篩選後看得到的列」—— 篩掉的東西不該被一次點擊掃到。
+    const vis = visibleJobs();
+    const on = vis.every(j => state.sel.has(j.key));
+    vis.forEach(j => on ? state.sel.delete(j.key) : state.sel.add(j.key));
+  }
+  else if (el.dataset.todo) {
+    const id = el.dataset.todo;
+    const item = (state.todos || []).find(t => t.id === id);
+    if (item && item.done) return void todoUndo(id);       // 勾錯了要有得退
+    state.tsel.has(id) ? state.tsel.delete(id) : state.tsel.add(id);
+  }
+  else if (act === "todo-all") {
+    const vis = (state.todos || []).filter(t => !t.done &&
+      (!state.filter.todo.kind || t.kind === state.filter.todo.kind));
+    const on = vis.every(t => state.tsel.has(t.id));
+    vis.forEach(t => on ? state.tsel.delete(t.id) : state.tsel.add(t.id));
+  }
+  else if (act === "todo-done") return void todoDone();
+  else if (act === "todo-clear") state.tsel.clear();
+  else if (act === "done-toggle") state.doneOpen = !state.doneOpen;
+  else if (act === "clear-sel") state.sel.clear();
+  else if (act === "apply-selected") return void mark("selected", "勾選");
+  else if (act === "skip-selected") return void mark("skipped", "略過");
+  else if (act === "refresh") { state.notice = ""; return void load(); }
+  else if (act === "apply-start") return void applyStart();
+  else if (act === "apply-next") return void applySignal("continue", "繼續");
+  else if (act === "apply-stop") return void applySignal("stop", "停止");
+  else if (act === "scan-jobs") return void scan("/api/scan/jobs", "職缺掃描");
+  else if (act === "scan-itv") return void scan("/api/scan/interviews", "面試信掃描");
+  render();
+});
+
+document.addEventListener("change", e => {
+  const f = e.target.dataset.filter;
+  if (!f) return;
+  const [tab, key] = f.split(".");
+  state.filter[tab][key] = e.target.value;
+  render();
+});
+
+render();   // 先畫出外框,資料到了再重畫 —— 空白頁看起來像壞掉
+load();
+api("/api/status").then(r => {
+  state.status = r.status; state.lock = r.lock; state.version = r.version;
+  render();
+}).catch(() => {}).finally(poll);
+</script>
+</body>
+</html>
