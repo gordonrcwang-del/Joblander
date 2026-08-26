@@ -21,7 +21,7 @@ flowchart TD
     Y2 -->|no| Y4["Skip,<br/>report it"]
     BK -->|A · 面試邀請| I["Extract date, time,<br/>format, interviewers,<br/>contact"]
 
-    I --> RS{"🔒 改期協調中<br/>已列此公司+職位?"}
+    I --> RS{"狀態欄 = 改期中?"}
     RS -->|yes| RS2["Hold:<br/>don't rewrite date<br/>don't touch calendar"]
     RS -->|no| J{"Already in<br/>面試行程.md<br/>as-is?"}
     J -->|yes, duplicate| K["Skip it"]
@@ -135,10 +135,14 @@ Deadlines are the one thing allowed to repeat: a `[NEED ACTION]` item comes back
 
 ## Reschedule hold (added 2026-08-19)
 
-`面試行程.md` can carry a `## 🔒 改期協調中` section listing interviews where a reschedule has been
-requested but the other side hasn't confirmed. While an interview sits there, the scan reads its
-invitation email as **already known** — it does not rewrite the date, does not move the row into
-`已確認排程`, and skips the calendar step entirely (`prompt.md` step 4's last bullet and step 5.6.0).
+`面試行程.md` is a single table. Its `狀態` column carries one of `已完成` / `待進行` / `改期中` /
+`已取消` — cancellations and reschedules are states of a row, not separate sections, so a cancelled
+interview keeps its row and its history instead of being moved to a list nobody reads.
+
+`改期中` means a reschedule has been requested and the other side hasn't confirmed. While a row sits
+in that state the scan reads its invitation email as **already known** — it does not rewrite the
+date, does not touch the status, and skips the calendar step entirely (`prompt.md` step 4's last
+bullet and step 5.6.0).
 
 Why it exists: the scan previously had only two states — what the email says, and what the file says —
 and resolved any mismatch in the email's favour. So a pending reschedule looked identical to a stale
