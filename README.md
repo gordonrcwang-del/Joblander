@@ -4,7 +4,7 @@
 
 ---
 
-## 三個子系統
+## 四個子系統
 
 ### 1. `job-search` —— 每天自動找職缺
 
@@ -27,6 +27,35 @@
 需要在 Claude 的 Settings → Connectors 連上 **Gmail**（唯讀）和 **Google Calendar** —— 跟 SETUP 步驟 2 的 App Password 是兩回事,那個只管寄信。
 
 同一件事只通知你一次 —— 三天的搜尋窗口內同一封信會被讀到六次,去重機制靠的是「公司 + 硬時間戳」這種它自己無法改寫的簽章。
+
+### 4. `dashboard` —— 一個地方看完
+
+一個只綁 `127.0.0.1` 的本機網頁,把今日職缺、面試行程、已投遞、待辦四件事放在同一頁。勾選職缺、標記略過、勾掉待辦、手動觸發掃描都在上面按。
+
+**它自己不寫任何檔案。** 每個變更都轉呼叫既有的 CLI,所以你手改過的 markdown 不會被網頁蓋掉 —— 這是它跟一般後台最大的差別。
+
+```bash
+python3 automation/dashboard/_internal/server.py
+```
+
+跑起來會自己開瀏覽器。網址帶一組隨機通行碼,每次啟動換一組,印在終端機、也寫在 `~/.joblander/dashboard-token`(0600)。**別把帶通行碼的網址存成書籤** —— 下次啟動就失效了。
+
+要它開機自動常駐(macOS):
+
+```bash
+python3 automation/dashboard/_internal/install_launchd.py --print   # 先看要裝什麼
+python3 automation/dashboard/_internal/install_launchd.py           # 確認後再裝
+```
+
+裝了之後伺服器一直開著,掉了會自己重啟 —— 但**登入時不會自動開分頁**,伺服器是背景程式。
+
+安裝時會順手在 `~/Applications` 做一個啟動器(Finder 裡叫「求職看板」),**把它拖到 Dock,以後點一下就開**。它每次都現讀當下的通行碼,所以伺服器重啟過也照樣打得開。單獨重做:
+
+```bash
+python3 automation/dashboard/_internal/make_launcher.py
+```
+
+**如果頁面突然說沒授權**,是伺服器重啟換了通行碼(每次啟動都換)。點一下啟動器重開就好,不用做別的。
 
 ### 加上四個 Claude Code skill
 
