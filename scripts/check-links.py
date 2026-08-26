@@ -54,6 +54,12 @@ def is_pathlike(text):
         return False
     if any(c in text for c in "*?|<>\n"):          # globs and shell plumbing
         return False
+    if " " in text:
+        # 反引號裡的指令(`cp a b`、`curl … http://…/`)整串拿去查檔案一定查不到,
+        # 只會變成假的 broken。第一個字不像路徑就當它是指令,不是路徑。
+        head = text.split()[0]
+        if "/" not in head and os.path.splitext(head)[1].lower() not in PATH_EXT:
+            return False
     if text.endswith("/"):                          # directory, checked separately
         return True
     return os.path.splitext(text)[1].lower() in PATH_EXT
