@@ -431,15 +431,20 @@ def _apply_status():
 
 # 掃描是 dashboard 自己起的子程序,狀態就在記憶體裡,不必猜。
 _scan_lock = threading.Lock()
-_scan = {"running": None, "started": None, "note": ""}
+_scan = {"running": None, "started": None, "note": "", "failed": None}
 
 
 def current_status():
     with _scan_lock:
-        running, note = _scan["running"], _scan["note"]
+        running, note, failed = _scan["running"], _scan["note"], _scan["failed"]
     if running:
         return {"key": "scanning", "label": running, "tone": "busy",
                 "sub": note or "跑到一半,結束會自己更新"}
+    # 失敗的掃描以前會回到「閒置」,跟從沒按過按鈕長得一模一樣 —— 使用者按了、
+    # 沒收到信、畫面卻說沒事,只能自己去翻 log。失敗要留在畫面上,直到下一次掃描。
+    if failed:
+        return {"key": "scan_failed", "label": "%s失敗" % failed["label"],
+                "tone": "attn", "sub": failed["why"]}
     return _apply_status() or IDLE
 
 
@@ -478,6 +483,7 @@ def start_scan(label, args, note):
         if _scan["running"]:
             raise LockBusy(_scan["running"])
         _scan["running"], _scan["started"], _scan["note"] = label, time.time(), note
+        _scan["failed"] = None
 
     def worker():
         try:
@@ -488,6 +494,8 @@ def start_scan(label, args, note):
         with _scan_lock:
             _scan["running"] = None
             _scan["note"] = ("完成" if done["ok"] else "失敗:" + done["output"][-200:])
+            _scan["failed"] = None if done["ok"] else {
+                "label": label, "why": done["output"][-300:].strip() or "沒有錯誤訊息"}
     threading.Thread(target=worker, daemon=True).start()
 
 

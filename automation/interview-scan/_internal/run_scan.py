@@ -33,7 +33,9 @@ SCAN_SCRIPT = os.path.join(BASE_DIR, "scan-gmail-interviews.sh")
 # The interview scan writes ledger progress and 面試行程.md; the job scan writes
 # the same ledger. One shared lock, so the dashboard's manual buttons and the two
 # schedules can never overlap — staggering them 20 minutes apart was a guess.
-sys.path.insert(0, os.path.join(PROJECT_ROOT, "automation", "_internal"))
+# PROJECT_ROOT 名字取得不好 —— 它其實是 automation/,不是 repo 根目錄。
+# 這裡照它真正的值來接,不要再往下加一層 automation/。
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "_internal"))
 from runlock import ledger_lock, LockBusy  # noqa: E402
 EMAIL_SCRIPT = os.path.join(BASE_DIR, "send_email_notification.py")
 
