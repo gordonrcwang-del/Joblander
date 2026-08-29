@@ -16,10 +16,18 @@ USAGE
     python3 install_launchd.py --uninstall
     python3 install_launchd.py --print    # 只印 plist,不寫檔
 """
-import json
 import os
 import subprocess
 import sys
+
+# 共用模組(runlock、config)住在 automation/_internal/。往上找到叫 automation
+# 的那一層,不要數 ".." —— 這裡數錯過三次,其中一次讓排程掃描靜靜死了兩天,
+# 因為它在寫 log 之前就死了。見 automation/_internal/test_imports.py。
+_shared = os.path.abspath(__file__)
+while os.path.basename(_shared) != "automation" and _shared != os.path.dirname(_shared):
+    _shared = os.path.dirname(_shared)
+sys.path.insert(0, os.path.join(_shared, "_internal"))
+import config  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", "..", ".."))
@@ -62,12 +70,7 @@ PLIST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 
 def label():
     """沿用 config.json 的 launchd_label_prefix,跟既有兩個排程同一個命名空間。"""
-    path = os.path.join(REPO_ROOT, "config.json")
-    prefix = "com.example"
-    if os.path.exists(path):
-        with open(path, encoding="utf-8") as fh:
-            prefix = json.load(fh).get("launchd_label_prefix", prefix)
-    return "%s.dashboard" % prefix
+    return "%s.dashboard" % config.get("launchd_label_prefix", "com.example")
 
 
 def python_bin():
@@ -114,10 +117,10 @@ def install():
     print("已安裝並啟動:%s" % label())
     print("  plist: %s" % path)
     print("  log:   %s" % LOG_PATH)
-    print("  網址(含 token)在 log 的最後幾行,或讀 ~/.joblander/dashboard-token")
+    print("  網址在 log 的最後幾行 —— 固定的,可以存書籤")
 
-    # 順手把啟動器做出來 —— 沒有它,使用者每次都得記一行指令(而且 token 每次
-    # 重啟都會換,書籤存不住)。做不出來不算裝失敗,伺服器才是主體。
+    # 順手把啟動器做出來 —— 它會先確認伺服器活著,沒活著就問要不要叫起來,
+    # 這是書籤做不到的。做不出來不算裝失敗,伺服器才是主體。
     try:
         import make_launcher
         print("  啟動器:%s" % make_launcher.build())

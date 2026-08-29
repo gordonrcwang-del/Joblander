@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Joblander</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
 <style>
   :root{
     --bg:#f6f6f4; --panel:#fff; --ink:#1c1c1a; --dim:#6d6c66; --line:#e2e1dc; --line2:#f0efec;
@@ -104,32 +105,16 @@
 "use strict";
 
 /* --------------------------------------------------------------------------
-   Token
-   server 啟動時把它放進網址(?t=…)。頁面拿到後存進 sessionStorage,再把網址洗掉,
-   免得它留在瀏覽器歷史、書籤、或使用者複製貼上的連結裡。
-   sessionStorage 而非 localStorage:每次啟動 server 都會換一組新 token。
+   沒有通行碼。server 綁 127.0.0.1,網址固定,存書籤也不會失效。
    -------------------------------------------------------------------------- */
-const KEY = "joblander-token";
-(function bootstrapToken(){
-  const u = new URL(location);
-  const t = u.searchParams.get("t");
-  if (t) {
-    sessionStorage.setItem(KEY, t);
-    u.searchParams.delete("t");
-    history.replaceState(null, "", u.pathname + u.search + u.hash);
-  }
-})();
-const token = () => sessionStorage.getItem(KEY) || "";
-
 async function api(path, body){
-  const opt = {headers:{Authorization: "Bearer " + token()}};
+  const opt = {headers:{}};
   if (body !== undefined) {
     opt.method = "POST";
     opt.headers["Content-Type"] = "application/json";
     opt.body = JSON.stringify(body);
   }
   const res = await fetch(path, opt);
-  if (res.status === 401) throw new Error("UNAUTHORIZED");
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
   return data;
@@ -359,7 +344,7 @@ function todoPanel(){
 
 /* -------------------------------------------------------------------------- */
 // 讀不到資料時只顯示錯誤,不要在底下再擺一張空表格 —— 那會讀成「今天真的沒職缺」,
-// 而真正的原因是 token 過期。
+// 而真正的原因是 server 沒在跑。
 const fatal = () => Boolean(state.error) && (state.jobs || []).length === 0;
 
 // 鎖被誰拿著就不給按 —— 兩個掃描同時寫紀錄檔會互相覆蓋。按鈕先擋一層,server
@@ -440,12 +425,6 @@ function render(){
 }
 
 /* ---- 資料 ---------------------------------------------------------------- */
-function authMessage(e){
-  return e.message === "UNAUTHORIZED"
-    ? "token 無效或過期。回終端看 server 印出的網址重開一次(每次重啟 server 都會換一組)。"
-    : e.message;
-}
-
 async function load(){
   try {
     const [jobs, itv, app, todos] = await Promise.all([
@@ -465,7 +444,7 @@ async function load(){
     state.interviews = state.interviews || [];
     state.applied = state.applied || {applied:[], total:0, counts:{}, limit:50};
     state.todos = state.todos || [];
-    state.error = "讀不到資料:" + authMessage(e);
+    state.error = "讀不到資料:" + e.message;
   }
   render();
 }
@@ -498,7 +477,7 @@ async function todoDone(){
       : `已標為完成 ${r.changed.length} 筆`;
     state.error = r.failed.length ? r.failed.map(f => `${f.id}：${f.error}`).join("\n") : "";
   } catch (e) {
-    state.error = "標記失敗:" + authMessage(e);
+    state.error = "標記失敗:" + e.message;
   }
   state.busy = false; render();
 }
@@ -508,7 +487,7 @@ async function todoUndo(id){
   try {
     applyTodos((await api("/api/todos/done", {ids:[id], done:false})).todos);
     state.notice = "已還原 1 筆";
-  } catch (e) { state.error = "還原失敗:" + authMessage(e); }
+  } catch (e) { state.error = "還原失敗:" + e.message; }
   state.busy = false; render();
 }
 
@@ -525,7 +504,7 @@ async function mark(stateName, verb){
     state.error = r.failed.length
       ? r.failed.map(f => `${f.key}：${f.error}`).join("\n") : "";
   } catch (e) {
-    state.error = `${verb}失敗:` + authMessage(e);
+    state.error = `${verb}失敗:` + e.message;
   }
   state.busy = false;
   render();
@@ -541,7 +520,7 @@ async function applyStart(){
     await api("/api/apply/start", {company: cid});
     state.notice = `已開始投遞（${cid}）—— 狀態欄會告訴你卡在哪`;
   } catch (e) {
-    state.error = "投履歷沒有啟動:" + authMessage(e);
+    state.error = "投履歷沒有啟動:" + e.message;
   }
   render();
   poll();
@@ -552,7 +531,7 @@ async function applySignal(name, label){
     const r = await api("/api/apply/" + name, {});
     state.status = r.status; state.lock = r.lock; state.version = r.version;
     state.notice = label;
-  } catch (e) { state.error = label + "失敗:" + authMessage(e); }
+  } catch (e) { state.error = label + "失敗:" + e.message; }
   render();
   poll();
 }
@@ -564,15 +543,16 @@ async function scan(path, label){
     state.status = r.status; state.lock = r.lock; state.version = r.version;
     state.notice = `${label}已開始 —— 跑完狀態欄會變,資料要按刷新才更新`;
   } catch (e) {
-    state.error = `${label}沒有啟動:` + authMessage(e);
+    state.error = `${label}沒有啟動:` + e.message;
   }
   render();
   poll();          // 立刻接上長輪詢,不必等前一輪的 25 秒逾時走完
 }
 
 /* ---- 狀態長輪詢 ----------------------------------------------------------
-   全頁唯一由 server 主動推的東西。用長輪詢而不是 SSE:EventSource 沒辦法帶
-   Authorization header,token 就得塞進網址,那是我們一開始特意避開的事。
+   全頁唯一由 server 主動推的東西。原本選長輪詢是因為 EventSource 沒辦法帶
+   Authorization header —— 通行碼拿掉之後那個理由不成立了,SSE 現在可行,只是
+   還沒換。會動,先留著。
    -------------------------------------------------------------------------- */
 let polling = false;
 async function poll(){
@@ -584,7 +564,7 @@ async function poll(){
       try {
         r = await api("/api/status/wait?since=" + encodeURIComponent(state.version));
       } catch (e) {
-        // server 重啟或 token 過期 —— 等一下再試,不要把畫面洗成錯誤。
+        // server 重啟中 —— 等一下再試,不要把畫面洗成錯誤。
         await new Promise(res => setTimeout(res, 3000));
         continue;
       }

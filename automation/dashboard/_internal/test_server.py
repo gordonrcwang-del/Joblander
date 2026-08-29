@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-test_server.py — ticket 02 的認證測試。
+test_server.py — dashboard 的 HTTP 行為。
 
-只驗外部行為:帶對的 token 拿得到資料,沒帶或帶錯的一律 401。用真的 socket 打
-真的 handler,不 mock —— 認證出錯的方式(header 名字打錯、路由順序寫反)只有走
-完整條路才看得到。
+看板現在沒有任何驗證:綁 127.0.0.1 就是全部的防護(2026-08-29 的決定,連
+Origin/Host 檢查也一併婉拒)。所以這裡驗的是反過來那件事 —— 什麼都不帶就拿得到
+資料,而且路由不會在某個角落偷偷留下一道 401。
+
+這批測試沒有跟著通行碼一起刪掉,是刻意的:驗證消失時測試也跟著消失,等於沒人再
+看著那個介面,下次有人「順手」加回一道 gate 也不會有東西擋。用真的 socket 打真的
+handler,不 mock。
 
     python3 test_server.py
 """
@@ -34,10 +38,19 @@ def _get(url, token=None):
         return e.code, e.read().decode("utf-8")
 
 
-class AuthTest(unittest.TestCase):
+def _post(url, raw_body):
+    req = urllib.request.Request(url, data=raw_body.encode("utf-8"), method="POST")
+    req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=5) as res:
+            return res.status, res.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8")
+
+
+class NoAuthTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        server.Handler.token = "test-token-abc"
         # port 0 = 讓 OS 挑一個沒人用的,測試才不會跟真的 server 或彼此撞埠。
         cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         cls.base = "http://127.0.0.1:%d" % cls.httpd.server_address[1]
@@ -49,33 +62,43 @@ class AuthTest(unittest.TestCase):
         cls.httpd.shutdown()
         cls.httpd.server_close()
 
-    def test_api_without_token_is_rejected(self):
-        code, _ = _get(self.base + "/api/jobs")
-        self.assertEqual(code, 401)
-
-    def test_api_with_wrong_token_is_rejected(self):
-        code, _ = _get(self.base + "/api/jobs", "not-the-token")
-        self.assertEqual(code, 401)
-
-    def test_api_with_token_returns_data(self):
-        code, body = _get(self.base + "/api/jobs", "test-token-abc")
+    def test_reading_jobs_needs_no_credentials(self):
+        code, body = _get(self.base + "/api/jobs")
         self.assertEqual(code, 200)
         self.assertIn("jobs", json.loads(body))
 
-    def test_readonly_health_also_requires_token(self):
-        """純讀取的 endpoint 也要 token,以免其他本機程式列舉狀態。"""
-        self.assertEqual(_get(self.base + "/api/health")[0], 401)
-        self.assertEqual(_get(self.base + "/api/health", "test-token-abc")[0], 200)
+    def test_every_read_endpoint_answers_without_credentials(self):
+        """漏掉一條就會變成「其他分頁都好、只有這頁一直轉圈」。"""
+        for path in ("/api/health", "/api/jobs", "/api/interviews",
+                     "/api/applied", "/api/todos", "/api/status"):
+            with self.subTest(path=path):
+                self.assertEqual(_get(self.base + path)[0], 200)
 
-    def test_index_is_served_without_token(self):
-        """HTML 不含 token,所以不需要 token —— 擋了就變雞生蛋。"""
-        code, body = _get(self.base + "/")
-        self.assertEqual(code, 200)
-        self.assertNotIn("test-token-abc", body)
+    def test_posting_reaches_the_handler_instead_of_an_auth_gate(self):
+        """壞掉的 body 要回 400(已經走到解析那一步),不是 401。"""
+        code, body = _post(self.base + "/api/jobs/mark", "{not json")
+        self.assertEqual(code, 400)
+        self.assertIn("JSON", json.loads(body)["error"])
 
-    def test_unknown_path_is_404_not_a_token_oracle(self):
-        code, _ = _get(self.base + "/api/nope", "test-token-abc")
-        self.assertEqual(code, 404)
+    def test_a_leftover_authorization_header_is_ignored_not_rejected(self):
+        """舊分頁和舊啟動器可能還在送 header —— 不能因此壞掉。"""
+        self.assertEqual(_get(self.base + "/api/jobs", "stale-token")[0], 200)
+
+    def test_a_leftover_t_query_param_is_harmless(self):
+        """使用者存的舊書籤還帶著 ?t=…。"""
+        self.assertEqual(_get(self.base + "/api/jobs?t=stale")[0], 200)
+
+    def test_index_is_served(self):
+        self.assertEqual(_get(self.base + "/")[0], 200)
+
+    def test_unknown_api_path_is_404_not_401(self):
+        self.assertEqual(_get(self.base + "/api/nope")[0], 404)
+
+    def test_the_token_machinery_is_gone_not_merely_bypassed(self):
+        """留著一個沒人呼叫的 issue_token 只會讓下一個人以為驗證還在。"""
+        for name in ("issue_token", "TOKEN_PATH"):
+            self.assertFalse(hasattr(server, name), name)
+        self.assertFalse(hasattr(server.Handler, "_authed"))
 
 
 class ParseTest(unittest.TestCase):

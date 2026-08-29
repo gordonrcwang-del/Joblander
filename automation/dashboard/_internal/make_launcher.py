@@ -3,22 +3,29 @@
 make_launcher.py — 產生一個點一下就開看板的 macOS App。
 
 WHY THIS EXISTS
-伺服器是 launchd 顧著的,所以它一直在跑;但登入時不會自己開分頁,而且每次重啟
-都換一組新通行碼(server.py 的 issue_token,刻意的)。這代表使用者不能存書籤 ——
-隔天那組就失效了 —— 只能每次現讀通行碼再開。
-
-要人記住並打一行指令太苛刻。這支把那行指令包成一個 App:點一下,它現讀
-~/.joblander/dashboard-token,開好帶通行碼的網址。伺服器沒在跑就問要不要叫起來。
+伺服器是 launchd 顧著的,所以它一直在跑,但登入時不會自己開分頁。網址現在是固定
+的(通行碼在 2026-08-29 拿掉了),所以存書籤其實也行 —— 這支還留著,是因為它多做
+一件書籤做不到的事:先確認伺服器活著,沒活著就問要不要叫起來,而不是丟一個連不上
+的空白分頁給使用者自己猜。
 
 USAGE
     python3 make_launcher.py            # 產生並安裝到 ~/Applications
     python3 make_launcher.py --print    # 只印出 AppleScript,不產生
 """
-import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+
+# 共用模組(runlock、config)住在 automation/_internal/。往上找到叫 automation
+# 的那一層,不要數 ".." —— 這裡數錯過三次,其中一次讓排程掃描靜靜死了兩天,
+# 因為它在寫 log 之前就死了。見 automation/_internal/test_imports.py。
+_shared = os.path.abspath(__file__)
+while os.path.basename(_shared) != "automation" and _shared != os.path.dirname(_shared):
+    _shared = os.path.dirname(_shared)
+sys.path.insert(0, os.path.join(_shared, "_internal"))
+import config  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", "..", ".."))
@@ -29,9 +36,6 @@ DEFAULT_PORT = 8765
 DEFAULT_DISPLAY_NAME = "求職看板"
 
 SCRIPT = '''on run
-	set homePath to POSIX path of (path to home folder)
-	set tokenPath to homePath & ".joblander/dashboard-token"
-
 	-- 伺服器是 launchd 顧著的,平常一定在。不在的話講人話,不要丟一個空白分頁。
 	set alive to false
 	try
@@ -53,37 +57,23 @@ SCRIPT = '''on run
 		end if
 	end if
 
-	try
-		set tok to do shell script "cat " & quoted form of tokenPath
-	on error
-		display dialog "找不到通行碼,%(name)s 可能還沒裝好。" & return & return & ¬
-			"先跑一次 install_launchd.py。" buttons {"好"} default button 1 with icon stop
-		return
-	end try
-
-	do shell script "open " & quoted form of ("http://127.0.0.1:%(port)d/?t=" & tok)
+	do shell script "open http://127.0.0.1:%(port)d/"
 end run
 '''
 
 
-def config():
-    path = os.path.join(REPO_ROOT, "config.json")
-    if not os.path.exists(path):
-        return {}
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
+# config() 曾經是這裡的一個區域函式 —— 現在是 automation/_internal/config.py。
 
 
 def label():
-    prefix = config().get("launchd_label_prefix", "com.example")
+    prefix = config.get("launchd_label_prefix", "com.example")
     return "%s.dashboard" % prefix
 
 
 def source():
-    cfg = config()
     return SCRIPT % {
-        "port": int(cfg.get("dashboard_port", DEFAULT_PORT)),
-        "name": cfg.get("dashboard_display_name", DEFAULT_DISPLAY_NAME),
+        "port": int(config.get("dashboard_port", DEFAULT_PORT)),
+        "name": config.get("dashboard_display_name", DEFAULT_DISPLAY_NAME),
         "label": label(),
     }
 
@@ -106,14 +96,22 @@ def build():
 
     # Finder 顯示的名字跟資料夾名稱分開 —— 檔名照 repo 的 kebab-case 規矩,
     # 使用者在 Dock 上看到的是看得懂的中文。
-    name = config().get("dashboard_display_name", DEFAULT_DISPLAY_NAME)
+    name = config.get("dashboard_display_name", DEFAULT_DISPLAY_NAME)
     plist = os.path.join(APP_PATH, "Contents", "Info.plist")
     for verb in ("Add :CFBundleDisplayName string", "Set :CFBundleDisplayName"):
         r = subprocess.run(["/usr/libexec/PlistBuddy", "-c", "%s %s" % (verb, name), plist],
                            capture_output=True)
         if r.returncode == 0:
             break
-    os.utime(APP_PATH, None)   # 讓 Finder 重讀 Info.plist
+    # osacompile 給的是 AppleScript 那顆通用圖示,Dock 上認不出是哪個 app。
+    # applet.icns 就是 bundle 讀的那個檔名,覆蓋掉即可,不用改 Info.plist。
+    icns = os.path.join(os.path.dirname(BASE_DIR), "assets", "icon.icns")
+    if os.path.exists(icns):
+        shutil.copyfile(icns, os.path.join(APP_PATH, "Contents", "Resources", "applet.icns"))
+    else:
+        print("警告:找不到 %s,先跑 build_icon.py,Dock 上會是預設圖示。" % icns)
+
+    os.utime(APP_PATH, None)   # 讓 Finder 重讀 Info.plist 與圖示
     return APP_PATH
 
 
@@ -124,7 +122,7 @@ def main():
     path = build()
     print("已建立:%s" % path)
     print("  在 Finder 的「應用程式」裡叫「%s」" %
-          config().get("dashboard_display_name", DEFAULT_DISPLAY_NAME))
+          config.get("dashboard_display_name", DEFAULT_DISPLAY_NAME))
     print("  把它拖到 Dock,以後點一下就開看板")
 
 

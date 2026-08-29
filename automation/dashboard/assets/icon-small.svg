@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Optical variant for 16/32px. The faint descent dots turn to mud below
+       ~48px, so small sizes keep only what still reads: the bar and the job.
+       Both are scaled up to hold their weight after downsampling. -->
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34332f"/>
+      <stop offset="1" stop-color="#222120"/>
+    </linearGradient>
+  </defs>
+  <rect x="60" y="60" width="904" height="904" rx="203" fill="url(#ground)"/>
+  <circle cx="470" cy="430" r="58" fill="#6ea3dd" opacity="0.55"/>
+  <polygon points="628,470 748,590 628,710 508,590" fill="#6ea3dd"/>
+  <rect x="200" y="754" width="624" height="78" rx="39" fill="#f0efeb"/>
+</svg>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-server.py — local dashboard for automation/, ticket 02 (server + token + jobs table).
+server.py — local dashboard for automation/, ticket 02 (server + jobs table).
 
 WHY THIS EXISTS
 求職狀態散在三個 markdown 檔裡,要看全貌得開三個編輯器分頁。這支 server 綁
@@ -11,14 +11,15 @@ WHY THIS EXISTS
 的慣例。
 
 AUTH
-啟動時產生一組隨機 token,寫進 repo 外的檔案(0600),並在終端印出帶 token 的
-網址。頁面從網址的 ?t= 取得後存進 sessionStorage 並把網址洗乾淨。
+沒有。綁 127.0.0.1 就是全部的防護,網址固定,可以存書籤。
 
-HTML 本身不需要 token,因為它不含 token —— 本機其他程式抓到首頁也只是一份空殼。
-所有 /api/* 都要 token,包含純讀取的,以免其他本機程式列舉狀態。
+原本每次啟動發一組隨機通行碼塞在網址的 ?t= 裡,結果是書籤永遠失效、伺服器一重啟
+畫面就說沒授權。2026-08-29 決定整套拿掉,並且明確不換成別的:Origin/Host 檢查
+(擋 DNS rebinding)也一併婉拒了。這是取捨過的結果,不是漏掉的 —— 要加回任何形式
+的驗證,先問過使用者。
 
 USAGE
-    python3 server.py            # 前景啟動,終端印出帶 token 的網址
+    python3 server.py            # 前景啟動,終端印出網址
     python3 server.py --port N   # 覆寫埠號(預設 config.json 的 dashboard_port,再預設 8765)
 """
 import errno
@@ -26,23 +27,26 @@ import hashlib
 import json
 import os
 import re
-import secrets
 import subprocess
 import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-# automation/_internal/runlock.py —— 所有 ledger 寫入者共用的那把鎖。
-# 這裡是 automation/dashboard/_internal/,往上兩層就是 automation/。
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "_internal"))
+# 共用模組(runlock、config)住在 automation/_internal/。往上找到叫 automation
+# 的那一層,不要數 ".." —— 這裡數錯過三次,其中一次讓排程掃描靜靜死了兩天,
+# 因為它在寫 log 之前就死了。見 automation/_internal/test_imports.py。
+_shared = os.path.abspath(__file__)
+while os.path.basename(_shared) != "automation" and _shared != os.path.dirname(_shared):
+    _shared = os.path.dirname(_shared)
+sys.path.insert(0, os.path.join(_shared, "_internal"))
+import config  # noqa: E402
 from runlock import is_busy as lock_holder, LockBusy  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", "..", ".."))
 INDEX_PATH = os.path.join(BASE_DIR, "index.html")
+FAVICON_PATH = os.path.join(os.path.dirname(BASE_DIR), "assets", "favicon.png")
 JOB_SEARCH_DIR = os.path.join(REPO_ROOT, "automation", "job-search")
 TODAY_JOBS_PATH = os.path.join(JOB_SEARCH_DIR, "today-jobs.md")
 APPLIED_JOBS_PATH = os.path.join(JOB_SEARCH_DIR, "applied-jobs.md")
@@ -53,9 +57,8 @@ INTERVIEW_SCAN_PY = os.path.join(INTERVIEW_SCAN_DIR, "run_scan.py")
 TODO_PY = os.path.join(INTERVIEW_SCAN_DIR, "todo.py")
 APPLY_BATCH_PY = os.path.join(REPO_ROOT, "automation", "job-apply", "_internal", "apply_batch.py")
 
-# 執行期狀態一律落在 repo 外 —— 這個 repo 是公開的,token 不能有任何進版控的機會。
-RUNTIME_DIR = os.path.join(os.path.expanduser("~"), ".joblander")
-TOKEN_PATH = os.path.join(RUNTIME_DIR, "dashboard-token")
+# 執行期狀態一律落在 repo 外 —— 這個 repo 是公開的。
+RUNTIME_DIR = config.RUNTIME_DIR
 
 # 申請流程的執行期狀態。批次執行器(ticket 08)寫這一份;申請 agent 在「需要登入」
 # 和「等你同意」那兩個時刻寫工作目錄裡的 agent-status.json。兩者都在 repo 外。
@@ -63,26 +66,6 @@ APPLY_STATE_PATH = os.path.join(RUNTIME_DIR, "apply-state.json")
 AGENT_STATUS_NAME = "agent-status.json"
 
 DEFAULT_PORT = 8765
-
-
-def load_config():
-    """config.json 是選用的 —— dashboard 只從裡面拿埠號,沒有也跑得起來。"""
-    path = os.path.join(REPO_ROOT, "config.json")
-    if not os.path.exists(path):
-        return {}
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-def issue_token():
-    """每次啟動換一組新 token —— 舊分頁失效是刻意的,不是缺陷。"""
-    os.makedirs(RUNTIME_DIR, exist_ok=True)
-    token = secrets.token_urlsafe(32)
-    # 先開 0600 再寫,避免內容有任何一瞬間是其他使用者讀得到的。
-    fd = os.open(TOKEN_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        fh.write(token + "\n")
-    return token
 
 
 # ---------------------------------------------------------------------------
@@ -511,7 +494,6 @@ class DashboardServer(ThreadingHTTPServer):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "joblander-dashboard/0.1"
-    token = ""          # 由 serve() 在啟動時填入
 
     def log_message(self, fmt, *args):
         sys.stderr.write("[dashboard] %s\n" % (fmt % args))
@@ -520,7 +502,8 @@ class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json; charset=utf-8"):
         if isinstance(body, (dict, list)):
             body = json.dumps(body, ensure_ascii=False)
-        raw = body.encode("utf-8")
+        # favicon 是 PNG —— bytes 直接送,不要當文字編碼。
+        raw = body if isinstance(body, bytes) else body.encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(raw)))
@@ -529,30 +512,24 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
-    def _authed(self):
-        """Bearer token。用 compare_digest 避免逐字元比對的時間差。"""
-        header = self.headers.get("Authorization", "")
-        if not header.startswith("Bearer "):
-            return False
-        return secrets.compare_digest(header[7:], self.token)
-
     # -- routes -------------------------------------------------------------
     def do_GET(self):
         path = self.path.split("?", 1)[0]
 
         if path == "/":
-            # HTML 不含 token,所以不擋 —— 擋了就變雞生蛋:頁面得先拿到東西才問得到 token。
             if not os.path.exists(INDEX_PATH):
                 return self._send(500, "index.html missing", "text/plain; charset=utf-8")
             with open(INDEX_PATH, encoding="utf-8") as fh:
                 return self._send(200, fh.read(), "text/html; charset=utf-8")
 
+        if path == "/favicon.png" or path == "/favicon.ico":
+            if not os.path.exists(FAVICON_PATH):
+                return self._send(404, "no favicon", "text/plain; charset=utf-8")
+            with open(FAVICON_PATH, "rb") as fh:
+                return self._send(200, fh.read(), "image/png")
+
         if not path.startswith("/api/"):
             return self._send(404, {"error": "not found"})
-
-        # 純讀取的 endpoint 也要 token,以免其他本機程式列舉狀態。
-        if not self._authed():
-            return self._send(401, {"error": "missing or invalid token"})
 
         if path == "/api/health":
             return self._send(200, {"ok": True})
@@ -576,8 +553,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
-        if not self._authed():
-            return self._send(401, {"error": "missing or invalid token"})
         try:
             length = int(self.headers.get("Content-Length") or 0)
             payload = json.loads(self.rfile.read(length) or "{}")
@@ -676,8 +651,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def serve(port, open_browser=True):
-    token = issue_token()
-    Handler.token = token
     try:
         httpd = DashboardServer(("127.0.0.1", port), Handler)
     except OSError as e:
@@ -686,12 +659,12 @@ def serve(port, open_browser=True):
                      "  看是誰:  lsof -ti :%d\n"
                      "  或換一個:python3 server.py --port %d" % (port, port, port + 1))
         raise
-    url = "http://127.0.0.1:%d/?t=%s" % (port, token)
+    url = "http://127.0.0.1:%d/" % port
     # flush=True:launchd 底下 stdout 不是 tty,不 flush 的話這幾行會卡在緩衝區裡,
     # 使用者去看 log 只會看到空檔案。
     print("Joblander dashboard", flush=True)
     print("  " + url, flush=True)
-    print("  token 也寫在 %s(0600)" % TOKEN_PATH, flush=True)
+    print("  網址固定,可以存書籤", flush=True)
     print("  Ctrl-C 結束", flush=True)
     if open_browser:
         # 只在有 GUI 的情況下試,失敗就算了 —— 網址已經印出來了。
@@ -709,7 +682,7 @@ def serve(port, open_browser=True):
 
 
 def main():
-    port = load_config().get("dashboard_port", DEFAULT_PORT)
+    port = config.get("dashboard_port", DEFAULT_PORT)
     if "--port" in sys.argv:
         port = int(sys.argv[sys.argv.index("--port") + 1])
     serve(port, open_browser="--no-browser" not in sys.argv)

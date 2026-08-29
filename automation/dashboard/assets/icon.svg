@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Joblander — a descent resolving into a touchdown.
+       Palette is lifted from the dashboard: #2b4f86 (action blue) brightened to
+       carry on a dark ground, #f0efeb (paper) for the bar. -->
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34332f"/>
+      <stop offset="1" stop-color="#222120"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#ground)"/>
+
+  <!-- descent: dots grow and firm up along one diagonal -->
+  <g fill="#6ea3dd">
+    <circle cx="300" cy="260" r="18" opacity="0.30"/>
+    <circle cx="386" cy="348" r="26" opacity="0.48"/>
+    <circle cx="472" cy="436" r="34" opacity="0.68"/>
+    <circle cx="558" cy="524" r="42" opacity="0.85"/>
+    <!-- the job: the diagonal's next step, arrived -->
+    <polygon points="644,534 722,612 644,690 566,612"/>
+  </g>
+
+  <!-- touchdown -->
+  <rect x="240" y="712" width="544" height="56" rx="28" fill="#f0efeb" opacity="0.92"/>
+</svg>
