@@ -24,9 +24,18 @@ import errno
 import fcntl
 import json
 import os
+import sys
 import time
 
-RUNTIME_DIR = os.path.join(os.path.expanduser("~"), ".joblander")
+# 共用模組(runlock、config)住在 automation/_internal/。往上找到叫 automation
+# 的那一層,不要數 ".." —— 這裡數錯過三次,其中一次讓排程掃描靜靜死了兩天,
+# 因為它在寫 log 之前就死了。見 automation/_internal/test_imports.py。
+_shared = os.path.abspath(__file__)
+while os.path.basename(_shared) != "automation" and _shared != os.path.dirname(_shared):
+    _shared = os.path.dirname(_shared)
+sys.path.insert(0, os.path.join(_shared, "_internal"))
+from config import RUNTIME_DIR  # noqa: E402
+
 LOCK_PATH = os.path.join(RUNTIME_DIR, "ledger.lock")
 
 

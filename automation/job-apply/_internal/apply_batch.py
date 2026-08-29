@@ -32,12 +32,21 @@ import subprocess
 import sys
 import time
 
+# 共用模組(runlock、config)住在 automation/_internal/。往上找到叫 automation
+# 的那一層,不要數 ".." —— 這裡數錯過三次,其中一次讓排程掃描靜靜死了兩天,
+# 因為它在寫 log 之前就死了。見 automation/_internal/test_imports.py。
+_shared = os.path.abspath(__file__)
+while os.path.basename(_shared) != "automation" and _shared != os.path.dirname(_shared):
+    _shared = os.path.dirname(_shared)
+sys.path.insert(0, os.path.join(_shared, "_internal"))
+import config  # noqa: E402
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", "..", ".."))
 ENGINE_PY = os.path.join(BASE_DIR, "playwright_script.py")
 SCAN_JOBS_PY = os.path.join(REPO_ROOT, "automation", "job-search", "_internal", "scan_jobs.py")
 
-RUNTIME_DIR = os.path.join(os.path.expanduser("~"), ".joblander")
+RUNTIME_DIR = config.RUNTIME_DIR
 STATE_PATH = os.path.join(RUNTIME_DIR, "apply-state.json")
 # 工作目錄刻意在專案外 —— 那是可丟棄的執行期狀態(Chrome profile、指令記錄),
 # 不是專案內容。

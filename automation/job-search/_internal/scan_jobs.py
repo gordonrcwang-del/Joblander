@@ -20,6 +20,32 @@ USAGE
     python3 scan_jobs.py applied      # regenerate applied-jobs.md (full application history) from ledger.json
     python3 scan_jobs.py progress <job_key> <status> [--note "..."]
                                        # update post-application status (pending/interview/offer/rejected/withdrawn)
+
+CLI CONTRACT
+This CLI is a seam, not just a convenience: it is the only writer of ledger.json,
+and two other programs cross it as adapters — the dashboard (server.py, via
+run_cli) and the apply batcher (apply_batch.py, via load_queue). Neither can
+import this module, so everything they rely on is stdout text and an exit code.
+That makes the following part of the interface. Changing it breaks them silently.
+
+  Exit codes
+    0    the subcommand did what it said
+    1    unknown subcommand, or missing/invalid arguments (usage goes to stdout)
+    !=0  refused or failed; the reason is a single line, and callers read
+         stderr first then fall back to stdout (see server.py run_cli_path)
+    `discover` exits non-zero when another scan holds the ledger lock. That is a
+    refusal, not a crash — the message names the holder.
+
+  stdout
+    `queue` is the ONLY subcommand with machine-readable output: a single JSON
+    object, nothing before or after it, keyed by company_id:
+        {"asml": [{"key", "title", "url", "locations", "selected_date"}, ...]}
+    Jobs are sorted by selected_date within each company. An empty queue is `{}`,
+    not an error. Never print anything else to stdout from that path — a stray
+    log line makes apply_batch.py fail to parse and abort the whole batch.
+
+    Every other subcommand prints human prose with no guaranteed shape. Callers
+    may show it to a person; they must not parse it.
 """
 import html
 import json
@@ -39,10 +65,17 @@ from email.mime.text import MIMEText
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.dirname(BASE_DIR)  # job-search/ — the user-facing files live one level up from this script
 
+# 共用模組(runlock、config)住在 automation/_internal/。往上找到叫 automation
+# 的那一層,不要數 ".." —— 這裡數錯過三次,其中一次讓排程掃描靜靜死了兩天,
+# 因為它在寫 log 之前就死了。見 automation/_internal/test_imports.py。
+_shared = os.path.abspath(__file__)
+while os.path.basename(_shared) != "automation" and _shared != os.path.dirname(_shared):
+    _shared = os.path.dirname(_shared)
+sys.path.insert(0, os.path.join(_shared, "_internal"))
 # Every writer of ledger.json shares one lock (automation/_internal/runlock.py).
 # Before it existed the two schedules were merely staggered 20 minutes apart and
 # hoped not to collide; the dashboard's manual buttons made that hope untenable.
-sys.path.insert(0, os.path.join(os.path.dirname(OUTPUT_DIR), "_internal"))
+import config  # noqa: E402
 from runlock import ledger_lock, LockBusy  # noqa: E402
 SOURCES_PATH = os.path.join(BASE_DIR, "sources.json")
 
@@ -56,7 +89,7 @@ def load_sources():
     """
     with open(SOURCES_PATH, encoding="utf-8") as fh:
         sources = json.load(fh)
-    secrets = _CONFIG.get("source_secrets", {})
+    secrets = config.get("source_secrets", {})
     for company in sources.get("companies", []):
         for key, value in secrets.get(company.get("id"), {}).items():
             company.setdefault("config", {})[key] = value
@@ -67,22 +100,8 @@ LEDGER_BAK_PATH = os.path.join(BASE_DIR, "ledger.bak.json")
 TODAY_JOBS_PATH = os.path.join(OUTPUT_DIR, "today-jobs.md")
 APPLIED_JOBS_PATH = os.path.join(OUTPUT_DIR, "applied-jobs.md")
 
-def _load_config():
-    """Read config.json from the repo root. See config.example.json."""
-    import json
-    root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                        "..", "..", ".."))
-    path = os.path.join(root, "config.json")
-    if not os.path.exists(path):
-        sys.exit("config.json not found at %s — copy config.example.json to "
-                 "config.json and fill it in (see docs/SETUP.md)." % path)
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-_CONFIG = _load_config()
-GMAIL_ADDRESS = _CONFIG["gmail_address"]
-GMAIL_APP_PASSWORD_KEYCHAIN_SERVICE = _CONFIG.get(
+GMAIL_ADDRESS = config.require("gmail_address")
+GMAIL_APP_PASSWORD_KEYCHAIN_SERVICE = config.get(
     "gmail_app_password_keychain_service", "job-scan-smtp-app-password")
 
 TODAY = date.today().isoformat()

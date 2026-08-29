@@ -24,6 +24,7 @@ REPO_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 # 被 launchd、dashboard 或另一支腳本叫起來的進入點。純 library 不必列 ——
 # 它們本來就會被這些人帶進來。
 ENTRY_POINTS = [
+    "automation/_internal/config.py",
     "automation/_internal/runlock.py",
     "automation/job-search/_internal/scan_jobs.py",
     "automation/interview-scan/_internal/run_scan.py",

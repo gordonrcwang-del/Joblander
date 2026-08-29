@@ -12,6 +12,8 @@ dashboard 把每一次勾選、略過、狀態更新都壓在 mark / queue / pro
 
     python3 test_scan_jobs.py
 """
+import contextlib
+import io
 import json
 import os
 import sys
@@ -89,6 +91,14 @@ class LedgerCase(unittest.TestCase):
     def run_cmd(self, fn, *argv):
         with mock.patch.object(sys, "argv", ["scan_jobs.py"] + list(argv)):
             fn()
+
+    def capture(self, fn, *argv):
+        """跑一個子指令並收下它整份 stdout —— CLI 契約驗的就是這個字串。"""
+        buf = io.StringIO()
+        with mock.patch.object(sys, "argv", ["scan_jobs.py"] + list(argv)):
+            with contextlib.redirect_stdout(buf):
+                fn()
+        return buf.getvalue()
 
     def section(self, text, heading_keyword):
         """抓出某個 '## …' 區塊的內容,到下一個 '## ' 為止。"""
@@ -239,6 +249,70 @@ class BackupTest(LedgerCase):
         self.assertTrue(os.path.exists(scan_jobs.LEDGER_BAK_PATH))
         with open(scan_jobs.LEDGER_BAK_PATH, encoding="utf-8") as fh:
             self.assertEqual(json.load(fh)["jobs"]["asml-1"]["state"], "candidate")
+
+
+class CliContractTest(LedgerCase):
+    """docstring 的 CLI CONTRACT 那一段的執行版本。
+
+    server.py 與 apply_batch.py 只能看到 stdout 跟離開碼 —— 它們 import 不到這個
+    模組。所以那兩樣東西是介面本身,不是實作細節。這裡把它釘住,免得哪天有人在
+    queue 的路徑上加一行 print,批次投遞就整批解析失敗。
+    """
+
+    JOBS = {
+        "asml-1": make_job(title="CS Engineer", state="selected"),
+        "asml-2": make_job(title="EUV Planner", state="candidate"),
+        "amat-1": make_job(company="AMAT", cid="amat", title="Process Eng",
+                           state="selected"),
+    }
+
+    def setUp(self):
+        super().setUp()
+        ledger = self.ledger()
+        ledger["jobs"]["asml-1"]["selected_date"] = "2026-08-20"
+        ledger["jobs"]["amat-1"]["selected_date"] = "2026-08-21"
+        self.write_ledger(ledger)
+
+    def test_queue_stdout_is_json_and_nothing_else(self):
+        out = self.capture(scan_jobs.cmd_queue, "queue")
+        json.loads(out)          # 前後多一個字都會在這裡炸
+
+    def test_queue_groups_by_company_id_and_omits_unselected(self):
+        queue = json.loads(self.capture(scan_jobs.cmd_queue, "queue"))
+        self.assertEqual(sorted(queue), ["amat", "asml"])
+        self.assertEqual([j["key"] for j in queue["asml"]], ["asml-1"])
+
+    def test_queue_entries_carry_exactly_the_documented_fields(self):
+        queue = json.loads(self.capture(scan_jobs.cmd_queue, "queue"))
+        self.assertEqual(sorted(queue["asml"][0]),
+                         ["key", "locations", "selected_date", "title", "url"])
+
+    def test_queue_sorts_by_selected_date_within_a_company(self):
+        ledger = self.ledger()
+        ledger["jobs"]["asml-2"]["state"] = "selected"
+        ledger["jobs"]["asml-2"]["selected_date"] = "2026-08-01"
+        self.write_ledger(ledger)
+        queue = json.loads(self.capture(scan_jobs.cmd_queue, "queue"))
+        self.assertEqual([j["key"] for j in queue["asml"]], ["asml-2", "asml-1"])
+
+    def test_an_empty_queue_is_an_empty_object_not_an_error(self):
+        """apply_batch 會把非零離開碼當成失敗中止 —— 沒東西可投不是失敗。"""
+        self.write_ledger({"schema": 1, "companies": {}, "jobs": {}})
+        self.assertEqual(json.loads(self.capture(scan_jobs.cmd_queue, "queue")), {})
+
+    def test_unknown_subcommand_exits_one(self):
+        with mock.patch.object(sys, "argv", ["scan_jobs.py", "nonsense"]):
+            with contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit) as cm:
+                    scan_jobs.main()
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_mark_without_enough_arguments_exits_one(self):
+        with mock.patch.object(sys, "argv", ["scan_jobs.py", "mark"]):
+            with contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit) as cm:
+                    scan_jobs.cmd_mark()
+        self.assertEqual(cm.exception.code, 1)
 
 
 if __name__ == "__main__":

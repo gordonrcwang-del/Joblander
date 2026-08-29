@@ -19,22 +19,16 @@ import sys
 import time
 from email.mime.text import MIMEText
 
-def _load_config():
-    """Read config.json from the repo root. See config.example.json."""
-    import json
-    root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                        "..", "..", ".."))
-    path = os.path.join(root, "config.json")
-    if not os.path.exists(path):
-        sys.exit("config.json not found at %s — copy config.example.json to "
-                 "config.json and fill it in (see docs/SETUP.md)." % path)
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-_CONFIG = _load_config()
-GMAIL_ADDRESS = _CONFIG["gmail_address"]
-GMAIL_APP_PASSWORD_KEYCHAIN_SERVICE = _CONFIG.get(
+# 共用模組(runlock、config)住在 automation/_internal/。往上找到叫 automation
+# 的那一層,不要數 ".." —— 這裡數錯過三次,其中一次讓排程掃描靜靜死了兩天,
+# 因為它在寫 log 之前就死了。見 automation/_internal/test_imports.py。
+_shared = os.path.abspath(__file__)
+while os.path.basename(_shared) != "automation" and _shared != os.path.dirname(_shared):
+    _shared = os.path.dirname(_shared)
+sys.path.insert(0, os.path.join(_shared, "_internal"))
+import config  # noqa: E402
+GMAIL_ADDRESS = config.require("gmail_address")
+GMAIL_APP_PASSWORD_KEYCHAIN_SERVICE = config.get(
     "gmail_app_password_keychain_service", "job-scan-smtp-app-password")
 
 # run_scan.py exports this so the subject line can carry the run's real start
