@@ -57,14 +57,13 @@ python3 automation/dashboard/_internal/make_launcher.py
 
 **如果點了啟動器跳出「現在沒有在跑」**,是伺服器掉了沒被拉回來。對話框按「叫起來」就好。
 
-### 加上四個 Claude Code skill
+### 加上三個 Claude Code skill
 
 | Skill | 做什麼 |
 |---|---|
 | `interview-prep` | 建 `<公司>/<職位>/` 資料夾,派兩波 subagent 平行產出公司簡介、職位分析、模擬面試 QA、領域基本知識 |
 | `position-intro` | 貼一個職缺連結,直接在對話裡回你 JD 摘要 + 論壇風評,不寫檔 |
 | `autofill-agent` | 開瀏覽器把申請表填完 |
-| `workflow-chart` | 幫其他 skill 產流程圖 |
 
 ---
 
